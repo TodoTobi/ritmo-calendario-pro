@@ -105,8 +105,9 @@ export default function RitmoMainPage() {
     setIsSyncingDb(true);
     setSyncFeedback(null);
     try {
-      const realEvents = generateRealOctoberEvents();
-      const realNotes = generateRealNotes();
+      const rawEvents = generateRealOctoberEvents();
+      const realEvents = rawEvents.map(({ is_inamovible, ...rest }) => rest);
+      const realNotes = generateRealNotes().map((n) => ({ ...n, linked_event_id: null }));
 
       const { error: evErr } = await supabaseBrowserClient
         .from('events')
@@ -130,7 +131,7 @@ export default function RitmoMainPage() {
       if (noteErr) {
         setSyncFeedback(`Eventos sincronizados, error en notas: ${noteErr.message}`);
       } else {
-        setEvents(realEvents);
+        setEvents(rawEvents);
         setNotes(realNotes);
         setDbStatus('connected');
         setSyncFeedback(`¡Éxito! ${realEvents.length} eventos y ${realNotes.length} notas sincronizados.`);
@@ -184,7 +185,8 @@ export default function RitmoMainPage() {
     setEvents((prev) => [...prev, newEvent]);
 
     try {
-      await supabaseBrowserClient.from('events').insert([newEvent]);
+      const { is_inamovible, ...dbPayload } = newEvent;
+      await supabaseBrowserClient.from('events').insert([dbPayload]);
     } catch (e) {
       console.warn('Error guardando evento en Supabase:', e);
     }

@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
       (cronSecret && token === cronSecret) ||
       process.env.NODE_ENV === 'development'
     ) {
-      const realEvents = generateRealOctoberEvents();
+      const rawEvents = generateRealOctoberEvents();
+      const realEvents = rawEvents.map(({ is_inamovible, ...rest }) => rest);
       const realNotes = generateRealNotes();
 
       // Upsert events into Supabase

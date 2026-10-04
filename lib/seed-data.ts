@@ -365,7 +365,7 @@ export function generateRealNotes(): NoteItem[] {
       content_markdown: '• L’Hôpital: aplicable si 0/0 o inf/inf.\n• Asíntotas horizontales: lim x->inf f(x).\n• Asíntotas verticales: raíces del denominador.\n• Repasar factorización y binomio de Newton.',
       category_tag: '#utn',
       linked_date: '2026-10-04',
-      linked_event_id: 'ev-utn-cursada',
+      linked_event_id: null,
       is_completed: false,
       synced_to_drive: true,
       drive_file_id: '1I2jPluS5gWPY8xJGqufea5tfC7Sgo17Q',
