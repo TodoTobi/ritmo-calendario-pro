@@ -426,7 +426,7 @@ export default function RitmoMainPage() {
                     <ShieldCheck className="w-4 h-4 text-ritmo-green" />
                     <div>
                       <p className="font-bold text-ritmo-ink">Modo Monousuario Soberano</p>
-                      <p className="text-ritmo-muted">Lucas (GMT-3 Buenos Aires)</p>
+                      <p className="text-ritmo-muted">Propietario (GMT-3 Buenos Aires)</p>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-ritmo-green px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
