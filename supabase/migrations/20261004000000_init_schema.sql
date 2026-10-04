@@ -40,7 +40,7 @@ END $$;
 
 -- 2. TABLA DE PERFIL DE USUARIO SOBERANO (MONOUSUARIO)
 CREATE TABLE IF NOT EXISTS users_profile (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     username TEXT NOT NULL UNIQUE DEFAULT 'lucas_ritmo',
     full_name TEXT NOT NULL DEFAULT 'Lucas',
     timezone TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires',
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS users_profile (
 
 -- 3. TABLA DE EVENTOS Y BLOQUES DE CALENDARIO
 CREATE TABLE IF NOT EXISTS events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     title TEXT NOT NULL,
     description TEXT,
     event_date DATE NOT NULL,
@@ -76,14 +76,14 @@ CREATE INDEX IF NOT EXISTS idx_events_date_start ON events(event_date, start_tim
 
 -- 4. TABLA DE TAREAS Y ENTREGAS PENDIENTES
 CREATE TABLE IF NOT EXISTS tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     title TEXT NOT NULL,
     description TEXT,
     status task_status NOT NULL DEFAULT 'pending',
     priority_tier event_tier NOT NULL DEFAULT 'tier_2',
     due_date TIMESTAMPTZ,
     difficulty_score SMALLINT CHECK (difficulty_score BETWEEN 1 AND 5),
-    linked_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
+    linked_event_id TEXT REFERENCES events(id) ON DELETE SET NULL,
     classroom_coursework_id TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
@@ -94,7 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
 
 -- 5. TABLA DE PLANTILLAS DE RUTINA FIJA (TIER 1 Y RECURRENTES)
 CREATE TABLE IF NOT EXISTS routine_templates (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     title TEXT NOT NULL,
     day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6), -- 0=Domingo, 6=Sábado
     start_time TIME NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS routine_templates (
 
 -- 6. TABLA DE SINCRONIZACIÓN CON GOOGLE CLASSROOM
 CREATE TABLE IF NOT EXISTS classroom_sync (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     course_id TEXT NOT NULL,
     course_name TEXT NOT NULL,
     coursework_id TEXT NOT NULL UNIQUE,
@@ -124,12 +124,12 @@ CREATE INDEX IF NOT EXISTS idx_classroom_coursework ON classroom_sync(coursework
 
 -- 7. TABLA DEL ANOTADOR HÍBRIDO (NOTAS DIARIAS Y BACKLOG)
 CREATE TABLE IF NOT EXISTS notes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     title TEXT NOT NULL,
     content_markdown TEXT NOT NULL,
     category_tag TEXT NOT NULL DEFAULT '#general',
     linked_date DATE,
-    linked_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
+    linked_event_id TEXT REFERENCES events(id) ON DELETE SET NULL,
     is_completed BOOLEAN NOT NULL DEFAULT false,
     synced_to_drive BOOLEAN NOT NULL DEFAULT false,
     drive_file_id TEXT,
@@ -142,8 +142,8 @@ CREATE INDEX IF NOT EXISTS idx_notes_linked_date ON notes(linked_date);
 
 -- 8. TABLA DE COLA DE ALERTAS Y SMART QUIET WINDOWS
 CREATE TABLE IF NOT EXISTS alerts_queue (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     cadence alert_cadence NOT NULL,
     scheduled_for TIMESTAMPTZ NOT NULL,
     status alert_status NOT NULL DEFAULT 'scheduled',
@@ -157,8 +157,8 @@ CREATE INDEX IF NOT EXISTS idx_alerts_pending ON alerts_queue(status, scheduled_
 
 -- 9. TABLA DE PROPUESTAS DE REPROGRAMACIÓN (HUMAN-IN-THE-LOOP)
 CREATE TABLE IF NOT EXISTS reschedule_proposals (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    source_event_id TEXT REFERENCES events(id) ON DELETE CASCADE,
     detected_overflow_reason TEXT NOT NULL,
     scenarios_json JSONB NOT NULL,
     selected_scenario TEXT,
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS reschedule_proposals (
 
 -- 10. TABLA DE CONVERSACIONES Y AUDIOS DE TELEGRAM
 CREATE TABLE IF NOT EXISTS telegram_conversations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     chat_id BIGINT NOT NULL,
     message_id BIGINT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
@@ -183,10 +183,10 @@ CREATE INDEX IF NOT EXISTS idx_telegram_chat ON telegram_conversations(chat_id, 
 
 -- 11. TABLA DE AUDITORÍA DE ACCIONES CRÍTICAS
 CREATE TABLE IF NOT EXISTS audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     action TEXT NOT NULL,
     entity_type TEXT NOT NULL,
-    entity_id UUID,
+    entity_id TEXT,
     old_state JSONB,
     new_state JSONB,
     performed_by TEXT NOT NULL DEFAULT 'lucas_ritmo',
@@ -230,7 +230,7 @@ FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION apply_reschedule_scenario(
-    p_proposal_id UUID,
+    p_proposal_id TEXT,
     p_scenario_key TEXT
 )
 RETURNS JSONB
@@ -260,7 +260,7 @@ BEGIN
                 start_time = (v_item->>'newStartTime')::TIME,
                 end_time = (v_item->>'newEndTime')::TIME,
                 updated_at = now()
-            WHERE id = (v_item->>'eventId')::UUID;
+            WHERE id = (v_item->>'eventId');
         END LOOP;
     END IF;
 
@@ -289,31 +289,71 @@ ALTER TABLE reschedule_proposals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE telegram_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
--- Políticas de bypass para service_role y monousuario
+-- Políticas de bypass para service_role, anon y monousuario
 DROP POLICY IF EXISTS "Acceso total monousuario en events" ON events;
 CREATE POLICY "Acceso total monousuario en events" ON events
     FOR ALL USING (
-        current_setting('request.headers', true)::json->>'x-ritmo-token' = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
+        coalesce((current_setting('request.headers', true)::json->>'x-ritmo-token'), '') = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
         OR auth.role() = 'service_role'
+        OR auth.role() = 'anon'
     );
 
 DROP POLICY IF EXISTS "Acceso total monousuario en notes" ON notes;
 CREATE POLICY "Acceso total monousuario en notes" ON notes
     FOR ALL USING (
-        current_setting('request.headers', true)::json->>'x-ritmo-token' = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
+        coalesce((current_setting('request.headers', true)::json->>'x-ritmo-token'), '') = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
         OR auth.role() = 'service_role'
+        OR auth.role() = 'anon'
     );
 
 DROP POLICY IF EXISTS "Acceso total monousuario en tasks" ON tasks;
 CREATE POLICY "Acceso total monousuario en tasks" ON tasks
     FOR ALL USING (
-        current_setting('request.headers', true)::json->>'x-ritmo-token' = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
+        coalesce((current_setting('request.headers', true)::json->>'x-ritmo-token'), '') = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
         OR auth.role() = 'service_role'
+        OR auth.role() = 'anon'
     );
 
 DROP POLICY IF EXISTS "Acceso total monousuario en alerts" ON alerts_queue;
 CREATE POLICY "Acceso total monousuario en alerts" ON alerts_queue
     FOR ALL USING (
-        current_setting('request.headers', true)::json->>'x-ritmo-token' = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
+        coalesce((current_setting('request.headers', true)::json->>'x-ritmo-token'), '') = 'rtm_sec_a8f9c2d1e04b789123456789abcdef'
         OR auth.role() = 'service_role'
+        OR auth.role() = 'anon'
+    );
+
+DROP POLICY IF EXISTS "Acceso total monousuario en templates" ON routine_templates;
+CREATE POLICY "Acceso total monousuario en templates" ON routine_templates
+    FOR ALL USING (
+        auth.role() = 'service_role' OR auth.role() = 'anon'
+    );
+
+DROP POLICY IF EXISTS "Acceso total monousuario en profiles" ON users_profile;
+CREATE POLICY "Acceso total monousuario en profiles" ON users_profile
+    FOR ALL USING (
+        auth.role() = 'service_role' OR auth.role() = 'anon'
+    );
+
+DROP POLICY IF EXISTS "Acceso total monousuario en classroom" ON classroom_sync;
+CREATE POLICY "Acceso total monousuario en classroom" ON classroom_sync
+    FOR ALL USING (
+        auth.role() = 'service_role' OR auth.role() = 'anon'
+    );
+
+DROP POLICY IF EXISTS "Acceso total monousuario en proposals" ON reschedule_proposals;
+CREATE POLICY "Acceso total monousuario en proposals" ON reschedule_proposals
+    FOR ALL USING (
+        auth.role() = 'service_role' OR auth.role() = 'anon'
+    );
+
+DROP POLICY IF EXISTS "Acceso total monousuario en telegram" ON telegram_conversations;
+CREATE POLICY "Acceso total monousuario en telegram" ON telegram_conversations
+    FOR ALL USING (
+        auth.role() = 'service_role' OR auth.role() = 'anon'
+    );
+
+DROP POLICY IF EXISTS "Acceso total monousuario en audit" ON audit_logs;
+CREATE POLICY "Acceso total monousuario en audit" ON audit_logs
+    FOR ALL USING (
+        auth.role() = 'service_role' OR auth.role() = 'anon'
     );

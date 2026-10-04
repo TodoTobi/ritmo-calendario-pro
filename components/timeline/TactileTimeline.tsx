@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { CalendarEvent } from '@/types/database.types';
 import { timeStringToMinutes, minutesToTimeString } from '@/lib/date-utils';
 import { EVENT_COLOR_MAP } from '@/lib/color-tokens';
@@ -23,10 +23,20 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeDraggingId, setActiveDraggingId] = useState<string | null>(null);
   const [dragOffsetY, setDragOffsetY] = useState<number>(0);
-  const [dragStartY, setDragStartY] = useState<number>(0);
   const [initialTopPx, setInitialTopPx] = useState<number>(0);
   const [collisionWarning, setCollisionWarning] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // References to preserve touch state across continuous frames and gestures
+  const isDraggingRef = useRef<boolean>(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const currentPointerYRef = useRef<number>(0);
+  const dragStartYRef = useRef<number>(0);
+  const initialScrollTopRef = useRef<number>(0);
+  const initialTopPxRef = useRef<number>(0);
+  const autoScrollRafRef = useRef<number | null>(null);
+  const activeEventRef = useRef<CalendarEvent | null>(null);
 
   // Filter events for this specific date
   const dayEvents = useMemo(() => {
@@ -52,105 +62,147 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
   );
 
   // Helper to convert minutes from 07:00 to top px
-  const minutesToPx = (minutes: number) => {
+  const minutesToPx = useCallback((minutes: number) => {
     const minsFromStart = Math.max(0, minutes - TIMELINE_START_HOUR * 60);
     return (minsFromStart / 60) * HOUR_HEIGHT_PX;
-  };
+  }, []);
 
-  const pxToMinutes = (px: number) => {
+  const pxToMinutes = useCallback((px: number) => {
     const mins = Math.round((px / HOUR_HEIGHT_PX) * 60) + TIMELINE_START_HOUR * 60;
     // Snap to 15-minute grid
     return Math.round(mins / 15) * 15;
-  };
+  }, []);
 
   // Check collision between a proposed interval and Tier 1 zones
-  const checkTier1Collision = (proposedStart: number, proposedEnd: number, currentEventId: string) => {
-    for (const zone of tier1Zones) {
-      if (zone.id === currentEventId) continue;
-      // Overlap condition: max(start1, start2) < min(end1, end2)
-      if (Math.max(proposedStart, zone.startMin) < Math.min(proposedEnd, zone.endMin)) {
-        return zone;
-      }
-    }
-    return null;
-  };
-
-  // Drag start handler (touch / mouse)
-  const handleTouchStart = (
-    e: React.TouchEvent | React.MouseEvent,
-    event: CalendarEvent
-  ) => {
-    if (event.tier === 'tier_1') {
-      // Haptic shake warning: Tier 1 cannot be dragged
-      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate([30, 50, 30]);
-      }
-      setCollisionWarning(`"${event.title}" es Tier 1 (Inamovible). No puede ser reprogramado.`);
-      setTimeout(() => setCollisionWarning(null), 3000);
-      return;
-    }
-
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const startMin = timeStringToMinutes(event.start_time);
-    const initialPx = minutesToPx(startMin);
-
-    setActiveDraggingId(event.id);
-    setDragStartY(clientY);
-    setInitialTopPx(initialPx);
-    setDragOffsetY(0);
-
-    // Short haptic vibration on grab
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(20);
-    }
-  };
-
-  const rafRef = useRef<number | null>(null);
-
-  const handleTouchMove = (e: TouchEvent | MouseEvent) => {
-    if (!activeDraggingId) return;
-
-    const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
-    const deltaY = clientY - dragStartY;
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      setDragOffsetY(deltaY);
-
-      const activeEv = dayEvents.find((x) => x.id === activeDraggingId);
-      if (!activeEv) return;
-
-      const durationMin =
-        timeStringToMinutes(activeEv.end_time) - timeStringToMinutes(activeEv.start_time);
-      const currentTopPx = initialTopPx + deltaY;
-      const proposedStartMin = pxToMinutes(currentTopPx);
-      const proposedEndMin = proposedStartMin + durationMin;
-
-      const collision = checkTier1Collision(proposedStartMin, proposedEndMin, activeDraggingId);
-      if (collision) {
-        setCollisionWarning(`Colisión con ${collision.title} (Tier 1 Protegido)`);
-        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-          navigator.vibrate(10);
+  const checkTier1Collision = useCallback(
+    (proposedStart: number, proposedEnd: number, currentEventId: string) => {
+      for (const zone of tier1Zones) {
+        if (zone.id === currentEventId) continue;
+        if (Math.max(proposedStart, zone.startMin) < Math.min(proposedEnd, zone.endMin)) {
+          return zone;
         }
-      } else {
-        setCollisionWarning(null);
       }
-    });
-  };
+      return null;
+    },
+    [tier1Zones]
+  );
 
-  const handleTouchEnd = async () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    if (!activeDraggingId) return;
+  // Continuous Auto-Scroll and Position Updater
+  const updateDragCalculations = useCallback(() => {
+    if (!isDraggingRef.current || !activeEventRef.current) return;
 
-    const activeEv = dayEvents.find((x) => x.id === activeDraggingId);
-    if (!activeEv) {
+    const currentScrollTop = containerRef.current?.scrollTop || 0;
+    const scrollAdjustment = currentScrollTop - initialScrollTopRef.current;
+    const deltaY = currentPointerYRef.current - dragStartYRef.current + scrollAdjustment;
+
+    setDragOffsetY(deltaY);
+
+    const activeEv = activeEventRef.current;
+    const durationMin =
+      timeStringToMinutes(activeEv.end_time) - timeStringToMinutes(activeEv.start_time);
+    const currentTopPx = initialTopPxRef.current + deltaY;
+    const proposedStartMin = pxToMinutes(currentTopPx);
+    const proposedEndMin = proposedStartMin + durationMin;
+
+    const collision = checkTier1Collision(proposedStartMin, proposedEndMin, activeEv.id);
+    if (collision) {
+      setCollisionWarning(`Colisión con ${collision.title} (Tier 1 Protegido)`);
+    } else {
+      setCollisionWarning(null);
+    }
+  }, [pxToMinutes, checkTier1Collision]);
+
+  // Animation frame loop for continuous edge auto-scroll
+  const runAutoScrollLoop = useCallback(() => {
+    if (!isDraggingRef.current || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const edgeThreshold = 85; // px from top or bottom of visible viewport
+    const pointerY = currentPointerYRef.current;
+
+    if (pointerY < rect.top + edgeThreshold && pointerY > rect.top - 60) {
+      // Near top edge: scroll UP smoothly
+      const intensity = Math.max(0.15, (rect.top + edgeThreshold - pointerY) / edgeThreshold);
+      const speed = Math.min(18, Math.max(3, intensity * 16));
+      container.scrollTop = Math.max(0, container.scrollTop - speed);
+      updateDragCalculations();
+    } else if (pointerY > rect.bottom - edgeThreshold && pointerY < rect.bottom + 60) {
+      // Near bottom edge: scroll DOWN smoothly
+      const intensity = Math.max(0.15, (pointerY - (rect.bottom - edgeThreshold)) / edgeThreshold);
+      const speed = Math.min(18, Math.max(3, intensity * 16));
+      container.scrollTop = Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + speed);
+      updateDragCalculations();
+    }
+
+    autoScrollRafRef.current = requestAnimationFrame(runAutoScrollLoop);
+  }, [updateDragCalculations]);
+
+  // Activate Dragging Mode
+  const startDragging = useCallback(
+    (event: CalendarEvent, clientY: number) => {
+      if (event.tier === 'tier_1') {
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate([35, 50, 35]);
+        }
+        setCollisionWarning(`"${event.title}" es Tier 1 (Inamovible). No puede ser reprogramado.`);
+        setTimeout(() => setCollisionWarning(null), 3000);
+        return;
+      }
+
+      const startMin = timeStringToMinutes(event.start_time);
+      const initialPx = minutesToPx(startMin);
+
+      activeEventRef.current = event;
+      isDraggingRef.current = true;
+      dragStartYRef.current = clientY;
+      currentPointerYRef.current = clientY;
+      initialScrollTopRef.current = containerRef.current?.scrollTop || 0;
+      initialTopPxRef.current = initialPx;
+
+      setActiveDraggingId(event.id);
+      setInitialTopPx(initialPx);
+      setDragOffsetY(0);
+
+      // Short tactile haptic vibration when card lifts
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(30);
+      }
+
+      // Start continuous auto-scroll check
+      if (autoScrollRafRef.current) cancelAnimationFrame(autoScrollRafRef.current);
+      autoScrollRafRef.current = requestAnimationFrame(runAutoScrollLoop);
+    },
+    [minutesToPx, runAutoScrollLoop]
+  );
+
+  // Stop Dragging and Commit or Revert
+  const stopDragging = useCallback(async () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (autoScrollRafRef.current) {
+      cancelAnimationFrame(autoScrollRafRef.current);
+      autoScrollRafRef.current = null;
+    }
+
+    if (!isDraggingRef.current || !activeEventRef.current) {
+      isDraggingRef.current = false;
       setActiveDraggingId(null);
       return;
     }
 
+    const activeEv = activeEventRef.current;
+    isDraggingRef.current = false;
+
+    const currentScrollTop = containerRef.current?.scrollTop || 0;
+    const scrollAdjustment = currentScrollTop - initialScrollTopRef.current;
+    const finalDeltaY = currentPointerYRef.current - dragStartYRef.current + scrollAdjustment;
+
     const durationMin =
       timeStringToMinutes(activeEv.end_time) - timeStringToMinutes(activeEv.start_time);
-    const finalTopPx = initialTopPx + dragOffsetY;
+    const finalTopPx = initialTopPxRef.current + finalDeltaY;
     let proposedStartMin = pxToMinutes(finalTopPx);
 
     // Constrain within bounds 07:00 to 23:00 - duration
@@ -159,14 +211,14 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
     proposedStartMin = Math.max(minPossible, Math.min(maxPossible, proposedStartMin));
     const proposedEndMin = proposedStartMin + durationMin;
 
-    const collision = checkTier1Collision(proposedStartMin, proposedEndMin, activeDraggingId);
+    const collision = checkTier1Collision(proposedStartMin, proposedEndMin, activeEv.id);
 
     if (collision) {
-      // Reject move: Rollback
+      // Collision Rollback with haptic error pulse
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([40, 60, 40]);
       }
-      setCollisionWarning(`Movimiento bloqueado: invade la zona protegida de ${collision.title}`);
+      setCollisionWarning(`Bloqueado: invade la zona protegida de "${collision.title}"`);
       setActiveDraggingId(null);
       setDragOffsetY(0);
       setTimeout(() => setCollisionWarning(null), 3500);
@@ -180,41 +232,92 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
     setDragOffsetY(0);
     setCollisionWarning(null);
 
-    // Call update handler
+    // Persist updated event time
     const success = await onUpdateEventTime(activeEv.id, newStartStr, newEndStr);
     if (success) {
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate(25);
+        navigator.vibrate(20);
       }
       setToastMessage(`Bloque reordenado: ${newStartStr} – ${newEndStr}`);
       setTimeout(() => setToastMessage(null), 3000);
     }
+  }, [pxToMinutes, checkTier1Collision, onUpdateEventTime]);
+
+  // Touch Handlers for Block Card (Long-press allows normal scrolling on quick flick)
+  const handleCardTouchStart = (e: React.TouchEvent, event: CalendarEvent) => {
+    if (event.tier === 'tier_1') return;
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    currentPointerYRef.current = touch.clientY;
+
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    // 200ms hold enters drag mode. If user swipes before 200ms, it scrolls naturally!
+    longPressTimerRef.current = setTimeout(() => {
+      startDragging(event, touch.clientY);
+    }, 200);
   };
 
+  // Immediate Drag on Grip Handle (0ms delay for intentional grab)
+  const handleGripTouchStart = (e: React.TouchEvent | React.MouseEvent, event: CalendarEvent) => {
+    e.stopPropagation();
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    startDragging(event, clientY);
+  };
+
+  // Global listeners while touch is active
   useEffect(() => {
-    if (!activeDraggingId) return;
+    const handleGlobalMove = (e: TouchEvent | MouseEvent) => {
+      const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
+      currentPointerYRef.current = clientY;
 
-    const onMove = (e: TouchEvent | MouseEvent) => handleTouchMove(e);
-    const onEnd = () => handleTouchEnd();
+      // If user is holding down before 200ms timer fires:
+      if (!isDraggingRef.current && touchStartPosRef.current) {
+        const deltaDist = Math.hypot(
+          clientX - touchStartPosRef.current.x,
+          clientY - touchStartPosRef.current.y
+        );
+        // If moved more than 8px, user is scrolling! Cancel the drag timer
+        if (deltaDist > 8 && longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
 
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
+      // If already in drag mode, prevent native page bounce and update block
+      if (isDraggingRef.current) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        updateDragCalculations();
+      }
+    };
+
+    const handleGlobalEnd = () => {
+      stopDragging();
+    };
+
+    window.addEventListener('touchmove', handleGlobalMove, { passive: false });
+    window.addEventListener('touchend', handleGlobalEnd);
+    window.addEventListener('mousemove', handleGlobalMove);
+    window.addEventListener('mouseup', handleGlobalEnd);
 
     return () => {
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', handleGlobalMove);
+      window.removeEventListener('touchend', handleGlobalEnd);
+      window.removeEventListener('mousemove', handleGlobalMove);
+      window.removeEventListener('mouseup', handleGlobalEnd);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (autoScrollRafRef.current) cancelAnimationFrame(autoScrollRafRef.current);
     };
-  }, [activeDraggingId, dragOffsetY, initialTopPx]);
+  }, [updateDragCalculations, stopDragging]);
 
   return (
     <div className="flex-1 flex flex-col bg-ritmo-bg relative overflow-hidden pb-24 select-none">
       {/* Collision Warning Banner */}
       {collisionWarning && (
-        <div className="sticky top-0 z-30 flex items-center gap-2 bg-[#fff0f1] px-4 py-2 text-xs font-bold text-[#ff5d63] border-b border-[#ff5d63]/30 shadow-md animate-pulse">
+        <div className="sticky top-0 z-40 flex items-center gap-2 bg-[#fff0f1] px-4 py-2.5 text-xs font-bold text-[#ff5d63] border-b border-[#ff5d63]/30 shadow-md animate-pulse">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{collisionWarning}</span>
         </div>
@@ -229,13 +332,13 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
       )}
 
       {/* Header Info */}
-      <div className="bg-white px-4 py-2 border-b border-ritmo-line flex items-center justify-between">
+      <div className="bg-white px-4 py-2.5 border-b border-ritmo-line flex items-center justify-between">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-ritmo-muted">
             Línea Táctil Magnética
           </h2>
           <p className="text-[11px] text-ritmo-ink font-semibold">
-            Mantén presionado para reordenar bloques elásticos
+            Arrastra el tirador o mantén presionado para reordenar
           </p>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-bold">
@@ -249,7 +352,7 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto relative px-2 py-3"
-        style={{ height: 'calc(100vh - 180px)' }}
+        style={{ height: 'calc(100vh - 180px)', touchAction: activeDraggingId ? 'none' : 'pan-y' }}
       >
         <div
           className="relative w-full"
@@ -312,20 +415,19 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
             return (
               <div
                 key={event.id}
-                onMouseDown={(e) => handleTouchStart(e, event)}
-                onTouchStart={(e) => handleTouchStart(e, event)}
+                onTouchStart={(e) => handleCardTouchStart(e, event)}
                 style={{
                   top: `${baseTopPx}px`,
                   height: `${heightPx - 3}px`,
                   transform: isDragging ? `translate3d(0, ${dragOffsetY}px, 0) scale(1.03)` : 'translate3d(0, 0, 0)',
                   willChange: isDragging ? 'transform' : 'auto',
                 }}
-                className={`absolute left-14 right-2 rounded-xl p-2.5 select-none ${
+                className={`absolute left-14 right-2 rounded-xl p-2.5 select-none transition-shadow ${
                   isDragging
-                    ? 'z-30 shadow-2xl cursor-grabbing ring-2 ring-ritmo-purple ring-offset-2 transition-none'
+                    ? 'z-30 shadow-2xl ring-2 ring-ritmo-purple ring-offset-2'
                     : isTier1
-                    ? 'z-10 shadow-sm cursor-not-allowed opacity-95 transition-transform duration-200'
-                    : 'z-20 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-transform duration-200'
+                    ? 'z-10 shadow-sm opacity-95'
+                    : 'z-20 shadow-sm hover:shadow-md'
                 } ${colorScheme.bg} border-l-4 ${colorScheme.text} border-t border-r border-b border-ritmo-line/40`}
               >
                 <div className="flex items-start justify-between gap-1.5 h-full">
@@ -357,11 +459,21 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                     )}
                   </div>
 
-                  <div className="shrink-0 flex items-center">
+                  {/* Grip Handle / Lock Icon */}
+                  <div className="shrink-0 flex items-center h-full">
                     {!isTier1 ? (
-                      <GripVertical className="w-4 h-4 text-ritmo-muted/60" />
+                      <div
+                        onTouchStart={(e) => handleGripTouchStart(e, event)}
+                        onMouseDown={(e) => handleGripTouchStart(e, event)}
+                        className="p-1.5 -mr-1 rounded-lg active:bg-ritmo-muted/20 cursor-grab active:cursor-grabbing text-ritmo-muted hover:text-ritmo-ink transition-colors"
+                        title="Arrastrar para mover horario"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </div>
                     ) : (
-                      <Lock className="w-3.5 h-3.5 text-ritmo-red/60" />
+                      <div className="p-1 -mr-1">
+                        <Lock className="w-3.5 h-3.5 text-ritmo-red/60" />
+                      </div>
                     )}
                   </div>
                 </div>

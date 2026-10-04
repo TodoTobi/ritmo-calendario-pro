@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { BottomNav, NavTab } from '@/components/ui/BottomNav';
 import { FAB } from '@/components/ui/FAB';
@@ -17,149 +17,24 @@ import {
   subMonths,
   format,
 } from '@/lib/date-utils';
-import { Settings, ShieldCheck, RefreshCw, Smartphone, BookOpen, Bot } from 'lucide-react';
+import {
+  Settings,
+  ShieldCheck,
+  RefreshCw,
+  Smartphone,
+  BookOpen,
+  Bot,
+  Database,
+  CheckCircle2,
+  AlertTriangle,
+  ExternalLink,
+} from 'lucide-react';
+import { generateRealOctoberEvents, generateRealNotes } from '@/lib/seed-data';
+import { supabaseBrowserClient } from '@/lib/supabase/client';
 
-// Seed events reflective of Lucas's schedule (October 2026)
-const INITIAL_EVENTS: CalendarEvent[] = [
-  {
-    id: 'ev-devocional-today',
-    title: 'Devocional Diario con Dios',
-    description: 'Oración matutina y lectura bíblica',
-    event_date: '2026-10-04',
-    start_time: '06:45:00',
-    end_time: '07:30:00',
-    tier: 'tier_1',
-    color: 'green',
-    is_inamovible: true,
-    difficulty_score: 1,
-    classroom_coursework_id: null,
-    created_from: 'template',
-    created_at: '2026-10-04T06:00:00Z',
-    updated_at: '2026-10-04T06:00:00Z',
-  },
-  {
-    id: 'ev-utn-cursada',
-    title: 'UTN Ingreso — Cursada Sábados',
-    description: 'Matemática y Física — Aula Magna UTN FRBA',
-    event_date: '2026-10-04',
-    start_time: '08:00:00',
-    end_time: '14:30:00',
-    tier: 'tier_1',
-    color: 'red',
-    is_inamovible: true,
-    difficulty_score: 5,
-    classroom_coursework_id: null,
-    created_from: 'template',
-    created_at: '2026-10-04T06:00:00Z',
-    updated_at: '2026-10-04T06:00:00Z',
-  },
-  {
-    id: 'ev-lamina-3',
-    title: 'Lámina 3 — Vistas Diédricas y Cortes',
-    description: 'Dibujo Técnico Formato A3. Tinta y escuadras.',
-    event_date: '2026-10-04',
-    start_time: '16:00:00',
-    end_time: '18:00:00',
-    tier: 'tier_3',
-    color: 'orange',
-    is_inamovible: false,
-    difficulty_score: 4,
-    classroom_coursework_id: null,
-    created_from: 'web',
-    created_at: '2026-10-04T06:00:00Z',
-    updated_at: '2026-10-04T06:00:00Z',
-  },
-  {
-    id: 'ev-gimnasio',
-    title: 'Gimnasio y Acondicionamiento',
-    description: 'Entrenamiento de fuerza y tren superior',
-    event_date: '2026-10-04',
-    start_time: '19:00:00',
-    end_time: '20:15:00',
-    tier: 'tier_3',
-    color: 'green',
-    is_inamovible: false,
-    difficulty_score: 2,
-    classroom_coursework_id: null,
-    created_from: 'web',
-    created_at: '2026-10-04T06:00:00Z',
-    updated_at: '2026-10-04T06:00:00Z',
-  },
-  {
-    id: 'ev-parcial-utn',
-    title: 'PARCIAL UTN MATEMÁTICA',
-    description: 'Evaluación integradora de ingreso en UTN FRBA',
-    event_date: '2026-10-24',
-    start_time: '08:00:00',
-    end_time: '12:00:00',
-    tier: 'tier_1',
-    color: 'red',
-    is_inamovible: true,
-    difficulty_score: 5,
-    classroom_coursework_id: null,
-    created_from: 'web',
-    created_at: '2026-10-04T06:00:00Z',
-    updated_at: '2026-10-04T06:00:00Z',
-  },
-  {
-    id: 'ev-ingles',
-    title: 'Instituto de Inglés Avanzado',
-    description: 'Clase sincrónica de gramática y conversación',
-    event_date: '2026-10-06',
-    start_time: '18:30:00',
-    end_time: '20:30:00',
-    tier: 'tier_1',
-    color: 'blue',
-    is_inamovible: true,
-    difficulty_score: 3,
-    classroom_coursework_id: null,
-    created_from: 'template',
-    created_at: '2026-10-04T06:00:00Z',
-    updated_at: '2026-10-04T06:00:00Z',
-  },
-];
-
-const INITIAL_NOTES: NoteItem[] = [
-  {
-    id: 'note-1',
-    title: 'Fórmulas Clave de Límites Indeterminados',
-    content_markdown: 'L’Hôpital: lim f(x)/g(x) = lim f’(x)/g’(x) cuando 0/0 o inf/inf.\nRevisar factorización de polinomios.',
-    category_tag: '#utn',
-    linked_date: '2026-10-04',
-    linked_event_id: 'ev-utn-cursada',
-    is_completed: false,
-    synced_to_drive: true,
-    drive_file_id: 'drive_doc_99182',
-    created_at: '2026-10-04T09:30:00Z',
-    updated_at: '2026-10-04T09:30:00Z',
-  },
-  {
-    id: 'note-2',
-    title: 'Comprar hojas A3 romani y microfibras 0.2',
-    content_markdown: 'Pasar por la librería técnica antes del viernes.',
-    category_tag: '#dibujo',
-    linked_date: '2026-10-04',
-    linked_event_id: null,
-    is_completed: false,
-    synced_to_drive: false,
-    drive_file_id: null,
-    created_at: '2026-10-04T10:15:00Z',
-    updated_at: '2026-10-04T10:15:00Z',
-  },
-  {
-    id: 'note-3',
-    title: 'Idea de Proyecto de Automatización con Telegram',
-    content_markdown: 'Conectar Webhook con Google Calendar y recibir resúmenes en audio.',
-    category_tag: '#ideas',
-    linked_date: null,
-    linked_event_id: null,
-    is_completed: false,
-    synced_to_drive: false,
-    drive_file_id: null,
-    created_at: '2026-10-03T18:00:00Z',
-    updated_at: '2026-10-03T18:00:00Z',
-  },
-];
+// Initial data loaded with Lucas's complete real October & November schedule
+const INITIAL_EVENTS: CalendarEvent[] = generateRealOctoberEvents();
+const INITIAL_NOTES: NoteItem[] = generateRealNotes();
 
 export default function RitmoMainPage() {
   const [activeTab, setActiveTab] = useState<NavTab>('calendar');
@@ -167,15 +42,103 @@ export default function RitmoMainPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date('2026-10-04T12:00:00'));
   const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
 
-  // Data collections state
+  // Data collections state initialized with full real schedule
   const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
   const [notes, setNotes] = useState<NoteItem[]>(INITIAL_NOTES);
+
+  // Seed / DB sync state in settings
+  const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'empty' | 'missing_tables'>('checking');
+  const [isSyncingDb, setIsSyncingDb] = useState<boolean>(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   // Modals state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
   const [selectedEventForModal, setSelectedEventForModal] = useState<CalendarEvent | null>(null);
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Supabase real-time synchronization on mount
+  useEffect(() => {
+    async function syncWithSupabase() {
+      try {
+        const { data: dbEvents, error: evErr } = await supabaseBrowserClient
+          .from('events')
+          .select('*')
+          .order('start_time');
+
+        if (evErr) {
+          if (evErr.code === 'PGRST205' || evErr.message?.includes('schema cache')) {
+            setDbStatus('missing_tables');
+          } else {
+            setDbStatus('empty');
+          }
+          return;
+        }
+
+        if (dbEvents && dbEvents.length > 0) {
+          setEvents(dbEvents as CalendarEvent[]);
+          setDbStatus('connected');
+        } else {
+          setDbStatus('empty');
+        }
+
+        const { data: dbNotes, error: nErr } = await supabaseBrowserClient
+          .from('notes')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!nErr && dbNotes && dbNotes.length > 0) {
+          setNotes(dbNotes as NoteItem[]);
+        }
+      } catch (err) {
+        console.warn('Supabase no conectado aún; usando dataset real local.', err);
+        setDbStatus('missing_tables');
+      }
+    }
+    syncWithSupabase();
+  }, []);
+
+  // Handler to sync real data into Supabase from UI
+  const handlePushRealDataToSupabase = async () => {
+    setIsSyncingDb(true);
+    setSyncFeedback(null);
+    try {
+      const realEvents = generateRealOctoberEvents();
+      const realNotes = generateRealNotes();
+
+      const { error: evErr } = await supabaseBrowserClient
+        .from('events')
+        .upsert(realEvents, { onConflict: 'id' });
+
+      if (evErr) {
+        if (evErr.code === 'PGRST205' || evErr.message?.includes('schema cache')) {
+          setDbStatus('missing_tables');
+          setSyncFeedback('Las tablas no existen aún en Supabase. Debes ejecutar el script SQL en el panel de Supabase.');
+        } else {
+          setSyncFeedback(`Error de Supabase: ${evErr.message}`);
+        }
+        setIsSyncingDb(false);
+        return;
+      }
+
+      const { error: noteErr } = await supabaseBrowserClient
+        .from('notes')
+        .upsert(realNotes, { onConflict: 'id' });
+
+      if (noteErr) {
+        setSyncFeedback(`Eventos sincronizados, error en notas: ${noteErr.message}`);
+      } else {
+        setEvents(realEvents);
+        setNotes(realNotes);
+        setDbStatus('connected');
+        setSyncFeedback(`¡Éxito! ${realEvents.length} eventos y ${realNotes.length} notas sincronizados.`);
+      }
+    } catch (e: any) {
+      setSyncFeedback(`Error de red: ${e?.message || 'Verifica tu conexión'}`);
+    } finally {
+      setIsSyncingDb(false);
+    }
+  };
 
   // Filter events based on focus mode
   const displayedEvents = useMemo(() => {
@@ -196,7 +159,7 @@ export default function RitmoMainPage() {
     setSelectedDate(date);
   };
 
-  const handleCreateEvent = (
+  const handleCreateEvent = async (
     newEventData: Omit<CalendarEvent, 'id' | 'is_inamovible' | 'created_at' | 'updated_at'>
   ) => {
     const newEvent: CalendarEvent = {
@@ -207,10 +170,21 @@ export default function RitmoMainPage() {
       updated_at: new Date().toISOString(),
     };
     setEvents((prev) => [...prev, newEvent]);
+
+    try {
+      await supabaseBrowserClient.from('events').insert([newEvent]);
+    } catch (e) {
+      console.warn('Error guardando evento en Supabase:', e);
+    }
   };
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = async (id: string) => {
     setEvents((prev) => prev.filter((e) => e.id !== id));
+    try {
+      await supabaseBrowserClient.from('events').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Error eliminando evento en Supabase:', e);
+    }
   };
 
   const handleUpdateEventTime = async (
@@ -231,11 +205,24 @@ export default function RitmoMainPage() {
         return e;
       })
     );
+
+    try {
+      await supabaseBrowserClient
+        .from('events')
+        .update({
+          start_time: newStartTime,
+          end_time: newEndTime,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', eventId);
+    } catch (e) {
+      console.warn('Error actualizando horario en Supabase:', e);
+    }
     return true;
   };
 
   // Notes handlers
-  const handleAddNote = (newNoteData: Omit<NoteItem, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleAddNote = async (newNoteData: Omit<NoteItem, 'id' | 'created_at' | 'updated_at'>) => {
     const newNote: NoteItem = {
       ...newNoteData,
       id: `note-${Date.now()}`,
@@ -243,53 +230,89 @@ export default function RitmoMainPage() {
       updated_at: new Date().toISOString(),
     };
     setNotes((prev) => [newNote, ...prev]);
+
+    try {
+      await supabaseBrowserClient.from('notes').insert([newNote]);
+    } catch (e) {
+      console.warn('Error guardando nota en Supabase:', e);
+    }
   };
 
-  const handleToggleNoteStatus = (id: string) => {
+  const handleToggleNoteStatus = async (id: string) => {
+    const updated = notes.find((n) => n.id === id);
+    if (!updated) return;
+    const newStatus = !updated.is_completed;
+
     setNotes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_completed: !n.is_completed } : n))
+      prev.map((n) => (n.id === id ? { ...n, is_completed: newStatus } : n))
     );
+
+    try {
+      await supabaseBrowserClient
+        .from('notes')
+        .update({ is_completed: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', id);
+    } catch (e) {
+      console.warn('Error actualizando estado de nota en Supabase:', e);
+    }
   };
 
-  const handleDeleteNote = (id: string) => {
+  const handleDeleteNote = async (id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await supabaseBrowserClient.from('notes').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Error eliminando nota en Supabase:', e);
+    }
   };
 
   const currentMonthFormatted = formatDateSafe(currentDate, 'MMMM yyyy');
 
   return (
-    <div className="flex min-h-screen flex-col bg-ritmo-bg relative">
+    <div className="flex flex-col h-screen w-full bg-ritmo-bg overflow-hidden text-ritmo-ink">
       {/* Top Header */}
       <TopHeader
         currentDateText={currentMonthFormatted}
+        isFocusMode={isFocusMode}
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
         onTodayClick={handleTodayClick}
-        onSearchClick={() => setIsQuickAddOpen(true)}
-        isFocusMode={isFocusMode}
+        onSearchClick={() => {}}
         onToggleFocusMode={() => setIsFocusMode((prev) => !prev)}
       />
 
-      {/* Main Content Area switched by Active Tab */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
+      {/* Main Content Area based on Active Bottom Tab */}
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         {activeTab === 'calendar' && (
-          <div className="w-full flex flex-col">
+          <div className="flex-1 overflow-y-auto pb-24 scroll-smooth">
+            {/* Full-Screen Hero Month View */}
             <MonthHeaderCollapsible
               currentDate={currentDate}
               selectedDate={selectedDate}
               events={displayedEvents}
               onSelectDate={handleSelectDate}
-              onEventClick={(ev) => setSelectedEventForModal(ev)}
             />
-            <AgendaFeed
-              events={displayedEvents}
-              selectedDateStr={selectedDateStr}
-              onEventClick={(ev) => setSelectedEventForModal(ev)}
-              onAddEventForDate={(d) => {
-                setSelectedDate(new Date(d));
-                setIsQuickAddOpen(true);
-              }}
-            />
+
+            {/* Continuous Vertical Feed of Days and Events */}
+            <div className="border-t border-ritmo-line/80 bg-white">
+              <div className="px-4 py-3 bg-ritmo-soft flex items-center justify-between border-b border-ritmo-line">
+                <span className="text-xs font-bold uppercase tracking-wider text-ritmo-muted">
+                  Agenda del Mes Completo
+                </span>
+                <span className="text-[11px] font-semibold text-ritmo-purple">
+                  Desliza hacia abajo ↓
+                </span>
+              </div>
+              <AgendaFeed
+                events={displayedEvents}
+                selectedDateStr={selectedDateStr}
+                onEventClick={(event: CalendarEvent) => setSelectedEventForModal(event)}
+                onAddEventForDate={(dateStr: string) => {
+                  setSelectedDate(new Date(`${dateStr}T12:00:00`));
+                  setIsQuickAddOpen(true);
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -320,6 +343,70 @@ export default function RitmoMainPage() {
               </h2>
 
               <div className="space-y-3 text-xs">
+                {/* Database Sync Card */}
+                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-ritmo-purple" />
+                      <div>
+                        <p className="font-bold text-ritmo-ink">Base de Datos Supabase</p>
+                        <p className="text-[11px] text-ritmo-muted">
+                          {dbStatus === 'connected' && 'Sincronizado con tablas remotas'}
+                          {dbStatus === 'empty' && 'Tablas vacías (listo para sembrar)'}
+                          {dbStatus === 'missing_tables' && 'Tablas pendientes de crear en SQL'}
+                          {dbStatus === 'checking' && 'Comprobando conexión...'}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        dbStatus === 'connected'
+                          ? 'bg-green-50 text-ritmo-green border-green-200'
+                          : dbStatus === 'missing_tables'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-blue-50 text-ritmo-blue border-blue-200'
+                      }`}
+                    >
+                      {dbStatus === 'connected' ? 'En Línea' : dbStatus === 'missing_tables' ? 'Falta SQL' : 'Conectando'}
+                    </span>
+                  </div>
+
+                  {dbStatus === 'missing_tables' && (
+                    <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
+                      <div className="flex items-center gap-1 font-bold">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        Paso pendiente en Supabase Dashboard:
+                      </div>
+                      <p>
+                        Abre tu proyecto de Supabase, ve a <strong>SQL Editor</strong>, pega el contenido del archivo de migración y presiona <strong>Run</strong>.
+                      </p>
+                      <a
+                        href="https://supabase.com/dashboard/project/fvqwfrjpoadvvbskgddz/sql/new"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-ritmo-purple underline text-[10px] pt-1"
+                      >
+                        Abrir SQL Editor en Supabase <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handlePushRealDataToSupabase}
+                    disabled={isSyncingDb}
+                    className="w-full py-2 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDb ? 'animate-spin' : ''}`} />
+                    {isSyncingDb ? 'Sincronizando...' : '🌱 Cargar Datos Reales a Supabase'}
+                  </button>
+
+                  {syncFeedback && (
+                    <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded border border-purple-100">
+                      {syncFeedback}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-ritmo-green" />
@@ -351,7 +438,7 @@ export default function RitmoMainPage() {
                     <Smartphone className="w-4 h-4 text-ritmo-blue" />
                     <div>
                       <p className="font-bold text-ritmo-ink">Telegram Bot Webhook</p>
-                      <p className="text-ritmo-muted">/api/telegram/webhook</p>
+                      <p className="text-ritmo-muted">@ritmo_lucas_bot</p>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-ritmo-blue px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">

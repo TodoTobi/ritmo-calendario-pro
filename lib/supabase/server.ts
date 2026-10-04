@@ -18,3 +18,5 @@ export const getSupabaseServerClient = () => {
     },
   });
 };
+
+export const supabaseServerClient = getSupabaseServerClient();
