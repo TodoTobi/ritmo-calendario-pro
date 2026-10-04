@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import { timeStringToMinutes } from '@/lib/date-utils';
-
-function errorResponse(status: number, title: string, detail: string, type: string) {
-  return new NextResponse(
-    JSON.stringify({
-      type: `https://ritmo.app/errors/${type}`,
-      title,
-      status,
-      detail,
-      instance: '/api/events/reorder',
-    }),
-    {
-      status,
-      headers: {
-        'Content-Type': 'application/problem+json',
-      },
-    }
-  );
-}
+import { createProblemResponse } from '@/lib/rfc7807';
+import { validateTierMovement } from '@/lib/calendar/tierProtection';
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -26,23 +9,12 @@ export async function PATCH(req: NextRequest) {
     const { eventId, newEventDate, newStartTime, newEndTime } = body;
 
     if (!eventId || !newStartTime || !newEndTime) {
-      return errorResponse(
+      return createProblemResponse(
         400,
         'Solicitud inválida',
         'Faltan campos obligatorios: eventId, newStartTime, newEndTime.',
-        'missing-fields'
-      );
-    }
-
-    const proposedStartMin = timeStringToMinutes(newStartTime);
-    const proposedEndMin = timeStringToMinutes(newEndTime);
-
-    if (proposedEndMin <= proposedStartMin) {
-      return errorResponse(
-        400,
-        'Horario inconsistente',
-        'La hora de finalización debe ser estrictamente posterior a la hora de inicio.',
-        'invalid-time-range'
+        'missing-fields',
+        '/api/events/reorder'
       );
     }
 
@@ -57,46 +29,70 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.warn('Supabase fetch issue (might be in offline/mock mode):', fetchError.message);
+      console.warn('[ReorderRoute] Supabase fetch issue (offline/mock mode):', fetchError.message);
     }
 
-    if (currentEvent && currentEvent.tier === 'tier_1') {
-      return errorResponse(
-        409,
-        'Conflicto con Inamovible',
-        'El evento que intenta mover pertenece al Tier 1 y está blindado de reprogramación.',
-        'err-tier1-conflict'
-      );
-    }
-
-    // 2. Fetch existing Tier 1 events on that date to check collisions
     const targetDate = newEventDate || currentEvent?.event_date;
+
+    // 2. Fetch existing events on that date
+    let existingTier1Events: Array<{
+      id: string;
+      title: string;
+      startTime: string;
+      endTime: string;
+      tier: 'tier_1' | 'tier_2' | 'tier_3';
+    }> = [];
+
     if (targetDate) {
-      const { data: tier1Events } = await supabase
+      const { data: dayEvents } = await supabase
         .from('events')
         .select('*')
-        .eq('event_date', targetDate)
-        .eq('tier', 'tier_1');
+        .eq('event_date', targetDate);
 
-      if (tier1Events && tier1Events.length > 0) {
-        for (const t1 of tier1Events) {
-          if (t1.id === eventId) continue;
-          const t1Start = timeStringToMinutes(t1.start_time);
-          const t1End = timeStringToMinutes(t1.end_time);
-
-          if (Math.max(proposedStartMin, t1Start) < Math.min(proposedEndMin, t1End)) {
-            return errorResponse(
-              409,
-              'Colisión con Tier 1',
-              `El horario colisiona con el bloque protegido "${t1.title}".`,
-              'err-tier1-collision'
-            );
-          }
-        }
+      if (dayEvents) {
+        existingTier1Events = dayEvents.map((e) => ({
+          id: e.id,
+          title: e.title,
+          startTime: e.start_time,
+          endTime: e.end_time,
+          tier: e.tier,
+        }));
       }
     }
 
-    // 3. Update the event in Supabase if found
+    // 3. Validate Tier movement invariants
+    const validation = validateTierMovement(
+      {
+        id: eventId,
+        tier: currentEvent?.tier || 'tier_2',
+        title: currentEvent?.title,
+      },
+      {
+        startTime: newStartTime,
+        endTime: newEndTime,
+      },
+      existingTier1Events
+    );
+
+    if (!validation.valid) {
+      const status = validation.errorCode === 'invalid-time-range' ? 400 : 409;
+      const title =
+        validation.errorCode === 'err-tier1-conflict'
+          ? 'Conflicto con Inamovible'
+          : validation.errorCode === 'err-tier1-collision'
+          ? 'Colisión con Tier 1'
+          : 'Horario inconsistente';
+
+      return createProblemResponse(
+        status,
+        title,
+        validation.message || 'Error de validación de horarios',
+        validation.errorCode || 'schedule-conflict',
+        '/api/events/reorder'
+      );
+    }
+
+    // 4. Update the event in Supabase if found
     if (currentEvent) {
       const { error: updateError } = await supabase
         .from('events')
@@ -109,11 +105,12 @@ export async function PATCH(req: NextRequest) {
         .eq('id', eventId);
 
       if (updateError) {
-        return errorResponse(
+        return createProblemResponse(
           500,
           'Fallo de Persistencia',
           updateError.message,
-          'database-update-failure'
+          'database-update-failure',
+          '/api/events/reorder'
         );
       }
     }
@@ -130,6 +127,12 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error inesperado';
-    return errorResponse(500, 'Error de Servidor', message, 'unexpected-error');
+    return createProblemResponse(
+      500,
+      'Error de Servidor',
+      message,
+      'unexpected-error',
+      '/api/events/reorder'
+    );
   }
 }

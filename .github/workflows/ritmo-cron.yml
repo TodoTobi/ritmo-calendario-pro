@@ -1,0 +1,52 @@
+name: Ritmo Hourly Cron Automation
+
+on:
+  schedule:
+    # Runs every hour at minute 0
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-cron-tasks:
+    name: Execute Hourly Sync & Smart Notifications
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Target URL
+        id: setup-url
+        run: |
+          TARGET="${{ secrets.VERCEL_URL }}"
+          if [ -z "$TARGET" ]; then
+            TARGET="ritmo-calendario-pro.vercel.app"
+          fi
+          # Ensure https protocol prefix
+          if [[ ! "$TARGET" =~ ^https?:// ]]; then
+            TARGET="https://$TARGET"
+          fi
+          echo "target_url=$TARGET" >> $GITHUB_OUTPUT
+          echo "Target configured to $TARGET"
+
+      - name: Dispatch Smart Quiet Notifications
+        run: |
+          echo "Triggering notification dispatcher..."
+          HTTP_STATUS=$(curl -s -o /tmp/notif_resp.json -w "%{http_code}" -X POST \
+            "${{ steps.setup-url.outputs.target_url }}/api/cron/notifications" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "Notifications HTTP Status: $HTTP_STATUS"
+          cat /tmp/notif_resp.json || true
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "Warning: Notification dispatcher returned status $HTTP_STATUS"
+          fi
+
+      - name: Dispatch Classroom Sync Delta
+        run: |
+          echo "Triggering Google Classroom sync..."
+          HTTP_STATUS=$(curl -s -o /tmp/classroom_resp.json -w "%{http_code}" -X POST \
+            "${{ steps.setup-url.outputs.target_url }}/api/cron/classroom-sync" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "Classroom Sync HTTP Status: $HTTP_STATUS"
+          cat /tmp/classroom_resp.json || true
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "Warning: Classroom sync returned status $HTTP_STATUS"
+          fi

@@ -34,6 +34,7 @@ export const TelegramIntentSchema = z.object({
 });
 
 export type TelegramIntentPayload = z.infer<typeof TelegramIntentSchema>;
+export type ParsedIntent = TelegramIntentPayload;
 
 /**
  * Fallback deterministic parser when Gemini API key is not provided in local dev

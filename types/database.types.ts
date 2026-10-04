@@ -170,73 +170,49 @@ export type Database = {
       };
       events: {
         Row: CalendarEvent;
-        Insert: Omit<CalendarEvent, 'id' | 'is_inamovible' | 'created_at' | 'updated_at'> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
+        Insert: Partial<CalendarEvent> & Pick<CalendarEvent, 'title' | 'event_date' | 'start_time' | 'end_time'>;
         Update: Partial<CalendarEvent>;
         Relationships: [];
       };
       tasks: {
         Row: TaskItem;
-        Insert: Omit<TaskItem, 'id' | 'created_at' | 'updated_at'> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
+        Insert: Partial<TaskItem> & Pick<TaskItem, 'title'>;
         Update: Partial<TaskItem>;
         Relationships: [];
       };
       routine_templates: {
         Row: RoutineTemplate;
-        Insert: Omit<RoutineTemplate, 'id'> & { id?: string };
+        Insert: Partial<RoutineTemplate> & Pick<RoutineTemplate, 'title' | 'day_of_week' | 'start_time' | 'end_time' | 'color'>;
         Update: Partial<RoutineTemplate>;
         Relationships: [];
       };
       classroom_sync: {
         Row: ClassroomSyncItem;
-        Insert: Omit<ClassroomSyncItem, 'id' | 'last_synced_at'> & {
-          id?: string;
-          last_synced_at?: string;
-        };
+        Insert: Partial<ClassroomSyncItem> & Pick<ClassroomSyncItem, 'course_id' | 'course_name' | 'coursework_id' | 'title' | 'state'>;
         Update: Partial<ClassroomSyncItem>;
         Relationships: [];
       };
       notes: {
         Row: NoteItem;
-        Insert: Omit<NoteItem, 'id' | 'created_at' | 'updated_at'> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
+        Insert: Partial<NoteItem> & Pick<NoteItem, 'title' | 'content_markdown'>;
         Update: Partial<NoteItem>;
         Relationships: [];
       };
       alerts_queue: {
         Row: AlertQueueItem;
-        Insert: Omit<AlertQueueItem, 'id' | 'created_at'> & {
-          id?: string;
-          created_at?: string;
-        };
+        Insert: Partial<AlertQueueItem> & Pick<AlertQueueItem, 'event_id' | 'cadence' | 'scheduled_for'>;
         Update: Partial<AlertQueueItem>;
         Relationships: [];
       };
       reschedule_proposals: {
         Row: RescheduleProposal;
-        Insert: Omit<RescheduleProposal, 'id' | 'created_at'> & {
-          id?: string;
-          created_at?: string;
-        };
+        Insert: Partial<RescheduleProposal> & Pick<RescheduleProposal, 'detected_overflow_reason' | 'scenarios_json'>;
         Update: Partial<RescheduleProposal>;
         Relationships: [];
       };
       telegram_conversations: {
         Row: TelegramConversation;
-        Insert: Omit<TelegramConversation, 'id' | 'created_at'> & {
-          id?: string;
-          created_at?: string;
-        };
+        Insert: Partial<TelegramConversation> & Pick<TelegramConversation, 'chat_id' | 'message_id' | 'role' | 'content'>;
         Update: Partial<TelegramConversation>;
         Relationships: [];
       };

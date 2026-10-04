@@ -8,7 +8,8 @@
     "build": "node --use-system-ca ./node_modules/next/dist/bin/next build",
     "start": "node --use-system-ca ./node_modules/next/dist/bin/next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node -e \"const j = require('jiti')(process.cwd()); j('./tests/tier-protection.test.ts'); j('./tests/smart-quiet-windows.test.ts');\""
   },
   "dependencies": {
     "@google/genai": "^2.27.0",
