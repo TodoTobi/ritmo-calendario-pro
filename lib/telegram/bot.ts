@@ -95,7 +95,7 @@ export async function sendConfirmationCard(
   chatId: number | string,
   intent: ParsedIntent
 ): Promise<TelegramApiResponse<TelegramMessage>> {
-  const cardText = `🤖 <b>Ritmo AI — Detección:</b>\n\n${escapeHtml(
+  const cardText = `🤖 <b>TobIAs — Detección:</b>\n\n${escapeHtml(
     intent.userConfirmationSummary
   )}\n\n<i>¿Deseas confirmar e impactar en tu calendario?</i>`;
 

@@ -315,7 +315,7 @@ export async function POST(req: NextRequest) {
     if (text === '/start') {
       await sendTelegramMessage(
         chatId,
-        '👋 <b>¡Hola Lucas!</b> Soy Ritmo, tu asistente de productividad personal.\n\nPodés enviarme:\n🎙 <b>Notas de voz</b> con compromisos, láminas o ideas\n📷 <b>Fotos de pizarrones</b> con fechas y fórmulas\n💬 <b>Mensajes de texto</b> directos\n\nComandos rápidos:\n• /hoy — Tu agenda para hoy\n• /ayuda — Guía rápida de uso'
+        '👋 <b>¡Hola Lucas!</b> Soy <b>TobIAs</b>, tu asistente de calendario y enfoque personal con IA.\n\nPodés enviarme:\n🎙 <b>Notas de voz</b> con compromisos, láminas o ideas\n📷 <b>Fotos de pizarrones</b> con fechas y fórmulas\n💬 <b>Mensajes de texto</b> directos\n\nComandos rápidos:\n• /hoy — Tu agenda para hoy\n• /ayuda — Guía rápida de uso'
       );
       return NextResponse.json({ ok: true, command: '/start' });
     }
