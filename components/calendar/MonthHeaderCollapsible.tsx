@@ -235,9 +235,22 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
           )}
         </button>
 
-        <span className="text-[10px] font-medium text-ritmo-muted/70 tracking-wide select-none">
-          ← Desliza para cambiar mes →
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline text-[10px] font-medium text-ritmo-muted/70 tracking-wide select-none">
+            ← Desliza para cambiar mes →
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const dateStr = format(selectedDate, 'yyyy-MM-dd');
+              const targetEl = document.getElementById(`day-${dateStr}`) || document.getElementById('agenda-section');
+              targetEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1 py-1 px-3 text-[11px] font-bold text-ritmo-purple hover:text-ritmo-purple/80 bg-ritmo-purple/10 rounded-full transition-transform active:scale-95"
+          >
+            <span>Ver actividades ({format(selectedDate, 'd MMM')}) ↓</span>
+          </button>
+        </div>
       </div>
     </div>
   );

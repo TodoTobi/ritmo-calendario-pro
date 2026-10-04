@@ -1,7 +1,7 @@
 import React from 'react';
 import { CalendarEvent } from '@/types/database.types';
 import { EVENT_COLOR_MAP, TIER_CONFIG } from '@/lib/color-tokens';
-import { X, Clock, Calendar, Lock, Trash2, Sparkles, BookOpen } from 'lucide-react';
+import { X, Clock, Calendar, Lock, Trash2, Sparkles, BookOpen, ExternalLink } from 'lucide-react';
 
 interface EventDetailModalProps {
   event: CalendarEvent | null;
@@ -115,6 +115,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               </div>
             )}
           </div>
+
+          {(event.created_from === 'classroom_sync' || Boolean(event.classroom_coursework_id)) && (
+            <a
+              href="https://classroom.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Abrir en Google Classroom</span>
+            </a>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2">

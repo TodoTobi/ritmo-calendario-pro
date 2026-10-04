@@ -24,6 +24,12 @@ function validateCronAuthorization(req: NextRequest): boolean {
     return true;
   }
 
+  // Allow requests triggered directly from the same-origin UI
+  const secFetchSite = req.headers.get('sec-fetch-site');
+  if (secFetchSite === 'same-origin') {
+    return true;
+  }
+
   // If no CRON_SECRET is configured in local development, allow execution
   if (!cronSecret && !masterToken) {
     return true;

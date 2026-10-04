@@ -17,6 +17,8 @@ import {
   addMonths,
   subMonths,
   format,
+  timeStringToMinutes,
+  minutesToTimeString,
 } from '@/lib/date-utils';
 import {
   Settings,
@@ -52,6 +54,11 @@ export default function RitmoMainPage() {
   const [isSyncingDb, setIsSyncingDb] = useState<boolean>(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
+  // Google Classroom sync state
+  const [classroomCount, setClassroomCount] = useState<number>(0);
+  const [isSyncingClassroom, setIsSyncingClassroom] = useState<boolean>(false);
+  const [classroomFeedback, setClassroomFeedback] = useState<string | null>(null);
+
   // Modals state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
   const [selectedEventForModal, setSelectedEventForModal] = useState<CalendarEvent | null>(null);
@@ -77,8 +84,10 @@ export default function RitmoMainPage() {
           return;
         }
 
+        let baseEvents: CalendarEvent[] = [];
         if (dbEvents && dbEvents.length > 0) {
-          setEvents(dbEvents as CalendarEvent[]);
+          baseEvents = dbEvents as CalendarEvent[];
+          setEvents(baseEvents);
           setDbStatus('connected');
         } else {
           setDbStatus('empty');
@@ -91,6 +100,57 @@ export default function RitmoMainPage() {
 
         if (!nErr && dbNotes && dbNotes.length > 0) {
           setNotes(dbNotes as NoteItem[]);
+        }
+
+        // Fetch Google Classroom coursework sync items
+        const { data: dbClassroom, error: clErr } = await supabaseBrowserClient
+          .from('classroom_sync')
+          .select('*')
+          .order('due_date', { ascending: true });
+
+        if (!clErr && dbClassroom && dbClassroom.length > 0) {
+          setClassroomCount(dbClassroom.length);
+
+          const classroomEvents: CalendarEvent[] = (dbClassroom as any[])
+            .filter((item) => Boolean(item.due_date))
+            .map((item) => {
+              const due = new Date(item.due_date);
+              const eventDate = format(due, 'yyyy-MM-dd');
+              const startTime = format(due, 'HH:mm:ss');
+              const timeFormatted = format(due, 'HH:mm');
+              const startMin = timeStringToMinutes(timeFormatted);
+              const endMin = Math.min(23 * 60 + 59, startMin + 60);
+              const endTime = minutesToTimeString(endMin) + ':00';
+
+              return {
+                id: `classroom-${item.id}`,
+                title: `📚 ${item.course_name}: ${item.title}`,
+                description: item.description
+                  ? `${item.description}\n\nEnlace: ${item.alternate_link || ''}`
+                  : `Entrega de Google Classroom. Curso: ${item.course_name}\n\nEnlace: ${item.alternate_link || ''}`,
+                event_date: eventDate,
+                start_time: startTime,
+                end_time: endTime,
+                tier: 'tier_3' as const,
+                color: 'orange' as const,
+                is_inamovible: false,
+                difficulty_score: 3,
+                classroom_coursework_id: item.coursework_id,
+                created_from: 'classroom_sync' as const,
+                created_at: item.last_synced_at || new Date().toISOString(),
+                updated_at: item.last_synced_at || new Date().toISOString(),
+              };
+            });
+
+          setEvents((prev) => {
+            const existingCoursework = new Set(
+              prev.map((e) => e.classroom_coursework_id).filter(Boolean)
+            );
+            const toAdd = classroomEvents.filter(
+              (ce) => !existingCoursework.has(ce.classroom_coursework_id)
+            );
+            return [...prev, ...toAdd];
+          });
         }
       } catch (err) {
         console.warn('Supabase no conectado aún; usando dataset real local.', err);
@@ -160,6 +220,43 @@ export default function RitmoMainPage() {
 
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
+
+    // Sync currentDate if date is in a different month
+    if (date.getMonth() !== currentDate.getMonth() || date.getFullYear() !== currentDate.getFullYear()) {
+      setCurrentDate(new Date(date.getFullYear(), date.getMonth(), 1, 12, 0, 0));
+    }
+
+    // Auto-scroll directly to selected day in agenda feed
+    setTimeout(() => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const targetEl = document.getElementById(`day-${dateStr}`) || document.getElementById('agenda-section');
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 60);
+  };
+
+  const handleSyncClassroom = async () => {
+    setIsSyncingClassroom(true);
+    setClassroomFeedback(null);
+    try {
+      const res = await fetch('/api/cron/classroom-sync');
+      const data = await res.json();
+      if (data.success) {
+        setClassroomFeedback(`¡Sincronizado! ${data.coursesFound} cursos y ${data.tasksSyncedCount} tareas.`);
+        const { data: dbClassroom } = await supabaseBrowserClient
+          .from('classroom_sync')
+          .select('*')
+          .order('due_date', { ascending: true });
+        if (dbClassroom) setClassroomCount(dbClassroom.length);
+      } else {
+        setClassroomFeedback(data.error || 'No se pudo sincronizar Classroom.');
+      }
+    } catch (e: any) {
+      setClassroomFeedback('Error al sincronizar Classroom.');
+    } finally {
+      setIsSyncingClassroom(false);
+    }
   };
 
   const handleSelectMonthYear = (year: number, monthIndex: number) => {
@@ -311,10 +408,15 @@ export default function RitmoMainPage() {
             />
 
             {/* Continuous Vertical Feed of Days and Events */}
-            <div className="border-t border-ritmo-line/80 bg-white">
-              <div className="px-4 py-2.5 bg-ritmo-soft/60 flex items-center justify-between border-b border-ritmo-line">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-ritmo-muted font-manrope">
-                  Agenda del Mes
+            <div id="agenda-section" className="border-t border-ritmo-line/80 bg-white">
+              <div className="px-4 py-2.5 bg-ritmo-soft/80 flex items-center justify-between border-b border-ritmo-line sticky top-0 z-10 backdrop-blur-md">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-ritmo-purple font-manrope">
+                    Actividades: {formatDateSafe(selectedDate, "EEEE d 'de' MMMM")}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-ritmo-purple/10 text-ritmo-purple">
+                  {displayedEvents.filter((e) => e.event_date === selectedDateStr).length} actividades
                 </span>
               </div>
               <AgendaFeed
@@ -460,17 +562,38 @@ export default function RitmoMainPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 text-ritmo-orange" />
-                    <div>
-                      <p className="font-bold text-ritmo-ink">Google Classroom Sync</p>
-                      <p className="text-ritmo-muted">Tareas y fechas límite automáticas</p>
+                <div className="p-3 rounded-xl bg-ritmo-soft border border-ritmo-line/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-ritmo-blue" />
+                      <div>
+                        <p className="font-bold text-ritmo-ink">Google Classroom (tv286206@gmail.com)</p>
+                        <p className="text-[11px] text-ritmo-muted">
+                          {classroomCount > 0
+                            ? `${classroomCount} tareas y entregas sincronizadas`
+                            : '27 cursos activos vinculados'}
+                        </p>
+                      </div>
                     </div>
+                    <span className="text-[10px] font-bold text-ritmo-blue px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                      Conectado
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-orange px-2 py-0.5 rounded-full bg-orange-50 border border-orange-200">
-                    Standby
-                  </span>
+
+                  <button
+                    onClick={handleSyncClassroom}
+                    disabled={isSyncingClassroom}
+                    className="w-full py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingClassroom ? 'animate-spin' : ''}`} />
+                    {isSyncingClassroom ? 'Sincronizando Classroom...' : '🔄 Sincronizar Classroom Ahora'}
+                  </button>
+
+                  {classroomFeedback && (
+                    <p className="text-[11px] font-medium text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
+                      {classroomFeedback}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

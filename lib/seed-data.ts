@@ -125,6 +125,26 @@ export function generateRealOctoberEvents(): CalendarEvent[] {
         created_at: '2026-10-01T00:00:00Z',
         updated_at: '2026-10-01T00:00:00Z',
       });
+
+      // Entrega real de Google Classroom: Seguridad y Medioambiente
+      if (day === 5) {
+        events.push({
+          id: 'ev-classroom-seguridad-20261005',
+          title: '📚 Seguridad y Medioambiente: Automatización y sostenibilidad',
+          description: 'Actividad 1 - 4to bimestre (Entrega máxima lunes 5/10 10:00 hs): Automatización de procesos industriales, ahorro energético y riesgos laborales.',
+          event_date: dateStr,
+          start_time: '10:00:00',
+          end_time: '11:00:00',
+          tier: 'tier_3',
+          color: 'orange',
+          is_inamovible: false,
+          difficulty_score: 3,
+          classroom_coursework_id: '869886917241',
+          created_from: 'classroom_sync',
+          created_at: '2026-10-04T00:00:00Z',
+          updated_at: '2026-10-04T00:00:00Z',
+        });
+      }
     } else if (dayOfWeek === 2 || dayOfWeek === 4) {
       // Martes y Jueves: Salida 12:00, pasantías virtuales y luego INSTITUTO DE INGLÉS (Tier 1)
       events.push({

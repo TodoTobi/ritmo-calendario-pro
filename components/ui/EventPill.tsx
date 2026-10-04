@@ -61,6 +61,11 @@ export const EventPill: React.FC<EventPillProps> = ({ event, onClick, isCompact 
                 D{event.difficulty_score}
               </span>
             )}
+            {(event.created_from === 'classroom_sync' || event.classroom_coursework_id) && (
+              <span className="ml-1 px-2 py-0.5 text-[9px] rounded-full bg-blue-50 border border-blue-200 font-extrabold text-blue-700 flex items-center gap-1 shadow-xs">
+                📚 Classroom
+              </span>
+            )}
           </div>
           <h4 className="font-semibold text-sm text-ritmo-ink leading-tight truncate">
             {event.title}
