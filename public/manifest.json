@@ -1,0 +1,25 @@
+{
+  "name": "Ritmo — Calendario & Anotador Personal Inteligente",
+  "short_name": "Ritmo",
+  "description": "Calendario & Anotador Personal Inteligente para estudiantes y aspirantes de ingeniería",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#6558f5",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "education"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

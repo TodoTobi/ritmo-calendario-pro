@@ -1,0 +1,35 @@
+{
+  "name": "ritmo-calendario-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ritmo — Calendario & Anotador Personal Inteligente para estudiantes de alta exigencia técnica",
+  "scripts": {
+    "dev": "node --use-system-ca ./node_modules/next/dist/bin/next dev",
+    "build": "node --use-system-ca ./node_modules/next/dist/bin/next build",
+    "start": "node --use-system-ca ./node_modules/next/dist/bin/next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^2.27.0",
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.451.0",
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.3"
+  }
+}
