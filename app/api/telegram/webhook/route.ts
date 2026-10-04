@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { parseIntent, ParsedIntent } from '@/lib/ai/intentParser';
+import { generateContentWithFallback } from '@/lib/ai/gemini';
 import {
   sendTelegramMessage,
   sendConfirmationCard,
@@ -16,6 +17,152 @@ function escapeHtml(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/**
+ * Handles conversational queries, questions about Classroom, agenda, notes or general chat.
+ * Responds directly without confirmation cards or buttons.
+ */
+async function handleChatbotQuery(
+  chatId: number | string,
+  userText: string,
+  parsedIntent: ParsedIntent
+): Promise<string> {
+  const supabase = getSupabaseServerClient();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  const lower = userText.toLowerCase();
+
+  // 1. CLASSROOM OR TASKS QUERY
+  if (
+    parsedIntent.query_category === 'CLASSROOM_OR_TASKS' ||
+    lower.includes('classroom') ||
+    lower.includes('tarea') ||
+    lower.includes('entrega') ||
+    lower.includes('tp') ||
+    lower.includes('deberes')
+  ) {
+    const { data: classroomItems } = await supabase
+      .from('classroom_sync')
+      .select('*')
+      .gte('due_date', new Date(now.getTime() - 24 * 3600 * 1000).toISOString())
+      .order('due_date', { ascending: true })
+      .limit(8);
+
+    if (!classroomItems || classroomItems.length === 0) {
+      const msg =
+        '🎉 <b>No tenés entregas pendientes ni tareas urgentes de Classroom</b> registradas para los próximos días en Ritmo.';
+      await sendTelegramMessage(chatId, msg);
+      return msg;
+    }
+
+    let response = '📚 <b>Tareas y Entregas de Google Classroom:</b>\n\n';
+
+    for (const item of classroomItems) {
+      const dueDateObj = item.due_date ? new Date(item.due_date) : null;
+      const dueStr = dueDateObj ? format(dueDateObj, 'dd/MM HH:mm') : 'Sin fecha';
+      const isTomorrow =
+        dueDateObj &&
+        format(dueDateObj, 'yyyy-MM-dd') === format(addDays(now, 1), 'yyyy-MM-dd');
+      const isToday = dueDateObj && format(dueDateObj, 'yyyy-MM-dd') === today;
+
+      const tag = isToday ? '🔴 <b>HOY</b>' : isTomorrow ? '⚠️ <b>MAÑANA</b>' : '🗓';
+
+      response += `${tag} <b>${dueStr} hs</b> — <i>${escapeHtml(item.course_name)}</i>\n`;
+      response += `   📝 <b>${escapeHtml(item.title)}</b>\n`;
+      if (item.alternate_link) {
+        response += `   🔗 <a href="${item.alternate_link}">Abrir en Google Classroom</a>\n`;
+      }
+      response += '\n';
+    }
+
+    response += '<i>¿Querés que te reserve un bloque hoy para avanzar con estas tareas?</i>';
+
+    await sendTelegramMessage(chatId, response);
+    return response;
+  }
+
+  // 2. SCHEDULE QUERY (Today, Tomorrow, Week)
+  if (
+    parsedIntent.query_category === 'SCHEDULE' ||
+    parsedIntent.intent === 'QUERY_SCHEDULE' ||
+    lower.includes('agenda') ||
+    lower.includes('horario') ||
+    lower.includes('qué tengo') ||
+    lower.includes('que tengo')
+  ) {
+    const isTomorrow =
+      parsedIntent.target_date_hint === 'tomorrow' ||
+      lower.includes('mañana') ||
+      lower.includes('manana');
+
+    const targetDate = isTomorrow ? format(addDays(now, 1), 'yyyy-MM-dd') : today;
+    const dateLabel = isTomorrow ? `Mañana (${targetDate})` : `Hoy (${targetDate})`;
+
+    const { data: dayEvents } = await supabase
+      .from('events')
+      .select('*')
+      .eq('event_date', targetDate)
+      .order('start_time', { ascending: true });
+
+    const { data: dayClassroom } = await supabase
+      .from('classroom_sync')
+      .select('*')
+      .gte('due_date', `${targetDate}T00:00:00.000Z`)
+      .lte('due_date', `${targetDate}T23:59:59.999Z`);
+
+    let response = `📅 <b>Agenda de ${dateLabel}:</b>\n\n`;
+
+    if (!dayEvents || dayEvents.length === 0) {
+      response += '<i>No tenés compromisos agendados para este día.</i>\n\n';
+    } else {
+      for (const ev of dayEvents) {
+        const tierBadge =
+          ev.tier === 'tier_1' ? '🛡 T1' : ev.tier === 'tier_2' ? '🔷 T2' : '🟠 T3';
+        response += `• <b>${ev.start_time.slice(0, 5)} - ${ev.end_time.slice(
+          0,
+          5
+        )}</b>: ${escapeHtml(ev.title)} (${tierBadge})\n`;
+      }
+      response += '\n';
+    }
+
+    if (dayClassroom && dayClassroom.length > 0) {
+      response += '⚠️ <b>Entregas de Classroom para ese día:</b>\n';
+      for (const item of dayClassroom) {
+        const timeStr = item.due_date ? format(new Date(item.due_date), 'HH:mm') : '';
+        response += `• <b>${timeStr}</b>: ${escapeHtml(item.course_name)} — <i>${escapeHtml(
+          item.title
+        )}</i>\n`;
+      }
+    }
+
+    await sendTelegramMessage(chatId, response);
+    return response;
+  }
+
+  // 3. GENERAL CHAT OR NOTES QUERY
+  try {
+    const chatPrompt = `
+Sos TobIAs, el asistente inteligente de Ritmo (calendario, tareas y enfoque personal para un estudiante técnico de secundaria y aspirante a ingeniería en la UTN).
+El usuario te escribió en Telegram: "${userText}"
+
+Contexto actual del sistema:
+- Fecha de hoy: ${today} (Buenos Aires, GMT-3).
+- Responde de forma cordial, concisa y empática en español rioplatense (voseo suave).
+- NO uses nombres de pila personales.
+- Podés explicarle tus capacidades si pregunta: gestionás su agenda, alertás entregas de Google Classroom y guardás notas de voz o texto.
+`;
+    const aiResponse = await generateContentWithFallback(chatPrompt);
+    await sendTelegramMessage(chatId, aiResponse);
+    return aiResponse;
+  } catch (err) {
+    console.error('[Webhook] Error generating general AI response:', err);
+    const fallbackMsg =
+      '¡Hola! Soy TobIAs. Podés consultarme tu agenda (/hoy), tus tareas de Classroom o enviarme notas y compromisos para agendar.';
+    await sendTelegramMessage(chatId, fallbackMsg);
+    return fallbackMsg;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -58,11 +205,11 @@ export async function POST(req: NextRequest) {
       }
 
       // A. Discard Action
-      if (data.startsWith('discard:') || data.startsWith('cancel_')) {
+      if (data.startsWith('discard:')) {
         await answerCallbackQuery(callbackId, 'Operación descartada');
         await sendTelegramMessage(
           chatId,
-          '❌ <i>Operación descartada. No se modificó tu calendario.</i>'
+          '❌ <b>Operación descartada.</b> No se modificó tu calendario.'
         );
 
         const supabase = getSupabaseServerClient();
@@ -73,47 +220,44 @@ export async function POST(req: NextRequest) {
           content: '[Acción: Descartar propuesta]',
         });
 
-        return NextResponse.json({
-          ok: true,
-          action: 'callback_discarded',
-          chatId,
-        });
+        return NextResponse.json({ ok: true, action: 'discarded' });
       }
 
-      // B. Confirm Action
-      if (data.startsWith('confirm:') || data.startsWith('confirm_')) {
-        await answerCallbackQuery(callbackId, 'Guardando en Ritmo...');
+      // B. Confirm and Save Action
+      if (data.startsWith('confirm:')) {
+        await answerCallbackQuery(callbackId, 'Procesando confirmación...');
 
         const supabase = getSupabaseServerClient();
 
-        // Retrieve the most recent pending intent for this chat
-        let intentToApply: ParsedIntent | null = null;
-        const { data: convHistory } = await supabase
+        // Retrieve last proposed intent for this chat
+        const { data: lastConversations } = await supabase
           .from('telegram_conversations')
           .select('*')
           .eq('chat_id', chatId)
+          .eq('role', 'assistant')
           .not('intent_detected', 'is', null)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .limit(1);
 
-        if (convHistory?.intent_detected) {
+        let intentToApply: ParsedIntent | null = null;
+        if (lastConversations && lastConversations.length > 0) {
           try {
-            intentToApply = JSON.parse(convHistory.intent_detected);
+            intentToApply = JSON.parse(
+              lastConversations[0].intent_detected as string
+            ) as ParsedIntent;
           } catch (e) {
-            console.warn('[Webhook] Failed to parse cached intent JSON:', e);
+            console.warn('[Webhook] Failed to parse cached intent_detected:', e);
           }
         }
 
-        // Fallback intent if history is unavailable
         if (!intentToApply) {
-          const rawIntent = data.split(':')[1] || 'CREATE_EVENT';
+          const rawIntent = data.replace('confirm:', '');
           intentToApply = {
+            action_type: 'MUTATION',
             intent: rawIntent as ParsedIntent['intent'],
-            confidence: 1.0,
-            userConfirmationSummary: 'Evento confirmado directamente',
+            confidence: 0.9,
             eventData: {
-              title: 'Compromiso agendado vía Telegram',
+              title: 'Compromiso Agendado',
               targetDate: format(new Date(), 'yyyy-MM-dd'),
               startTime: '16:00',
               durationMinutes: 60,
@@ -121,28 +265,30 @@ export async function POST(req: NextRequest) {
               color: 'blue',
               difficultyScore: 2,
             },
+            userConfirmationSummary: 'Compromiso confirmado',
           };
         }
 
-        // Branch by Intent Type
+        // Apply intent based on type
         if (
           intentToApply.intent === 'CREATE_EVENT' ||
           intentToApply.intent === 'ADD_DRAWING_PLATE'
         ) {
           const evData = intentToApply.eventData || {
-            title: 'Evento Ritmo',
+            title: 'Compromiso sin título',
             targetDate: format(new Date(), 'yyyy-MM-dd'),
             startTime: '16:00',
             durationMinutes: 60,
-            tier: 'tier_2',
-            color: 'blue',
+            tier: 'tier_2' as const,
+            color: 'blue' as const,
             difficultyScore: 2,
           };
 
           const targetDate = evData.targetDate || format(new Date(), 'yyyy-MM-dd');
           const startTime = evData.startTime || '16:00';
+          const duration = evData.durationMinutes || 60;
           const startMin = timeStringToMinutes(startTime);
-          const endMin = startMin + (evData.durationMinutes || 60);
+          const endMin = startMin + duration;
           const endTime = minutesToTimeString(endMin);
 
           // Tier 1 Collision Check
@@ -323,15 +469,24 @@ export async function POST(req: NextRequest) {
     if (text === '/hoy') {
       const supabase = getSupabaseServerClient();
       const today = format(new Date(), 'yyyy-MM-dd');
+      const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+
       const { data: todayEvents } = await supabase
         .from('events')
         .select('*')
         .eq('event_date', today)
         .order('start_time', { ascending: true });
 
+      const { data: upcomingTasks } = await supabase
+        .from('classroom_sync')
+        .select('*')
+        .gte('due_date', `${today}T00:00:00.000Z`)
+        .lte('due_date', `${tomorrow}T23:59:59.999Z`)
+        .order('due_date', { ascending: true });
+
       let scheduleText = `📅 <b>Agenda de Hoy (${today}):</b>\n\n`;
       if (!todayEvents || todayEvents.length === 0) {
-        scheduleText += '<i>No tienes compromisos agendados para hoy.</i>';
+        scheduleText += '<i>No tienes compromisos agendados para hoy.</i>\n\n';
       } else {
         for (const ev of todayEvents) {
           const tierBadge =
@@ -341,7 +496,19 @@ export async function POST(req: NextRequest) {
             5
           )}</b>: ${escapeHtml(ev.title)} (${tierBadge})\n`;
         }
+        scheduleText += '\n';
       }
+
+      if (upcomingTasks && upcomingTasks.length > 0) {
+        scheduleText += '⚠️ <b>Entregas próximas de Classroom:</b>\n';
+        for (const t of upcomingTasks) {
+          const dStr = t.due_date ? format(new Date(t.due_date), 'dd/MM HH:mm') : '';
+          scheduleText += `• <b>${dStr}</b>: ${escapeHtml(t.course_name)} — <i>${escapeHtml(
+            t.title
+          )}</i>\n`;
+        }
+      }
+
       await sendTelegramMessage(chatId, scheduleText);
       return NextResponse.json({ ok: true, command: '/hoy' });
     }
@@ -368,7 +535,27 @@ export async function POST(req: NextRequest) {
         media_url: voice.file_id,
       });
 
-      // Send confirmation card with inline keyboard
+      // If user is just asking a question via voice, respond conversationally
+      if (parsedIntent.action_type === 'QUERY') {
+        const queryText = parsedIntent.userConfirmationSummary || 'Consulta por voz';
+        const responseText = await handleChatbotQuery(chatId, queryText, parsedIntent);
+
+        await supabase.from('telegram_conversations').insert({
+          chat_id: chatId,
+          message_id: Date.now(),
+          role: 'assistant',
+          content: responseText,
+          intent_detected: JSON.stringify(parsedIntent),
+        });
+
+        return NextResponse.json({
+          ok: true,
+          handled: 'voice_query',
+          intent: parsedIntent,
+        });
+      }
+
+      // Mutation: Send confirmation card with inline keyboard
       const sentCard = await sendConfirmationCard(chatId, parsedIntent);
 
       // Log assistant card with intent_detected
@@ -382,7 +569,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         ok: true,
-        handled: 'voice',
+        handled: 'voice_mutation',
         intent: parsedIntent,
       });
     }
@@ -403,7 +590,26 @@ export async function POST(req: NextRequest) {
         content: text,
       });
 
-      // Send confirmation card with inline keyboard
+      // 1. Natural Language Query / Chat -> Direct intelligent response
+      if (parsedIntent.action_type === 'QUERY') {
+        const responseText = await handleChatbotQuery(chatId, text, parsedIntent);
+
+        await supabase.from('telegram_conversations').insert({
+          chat_id: chatId,
+          message_id: Date.now(),
+          role: 'assistant',
+          content: responseText,
+          intent_detected: JSON.stringify(parsedIntent),
+        });
+
+        return NextResponse.json({
+          ok: true,
+          handled: 'text_query',
+          intent: parsedIntent,
+        });
+      }
+
+      // 2. Action / Mutation -> Send confirmation card with inline keyboard
       const sentCard = await sendConfirmationCard(chatId, parsedIntent);
 
       // Log assistant response
@@ -417,7 +623,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         ok: true,
-        handled: 'text',
+        handled: 'text_mutation',
         intent: parsedIntent,
       });
     }
