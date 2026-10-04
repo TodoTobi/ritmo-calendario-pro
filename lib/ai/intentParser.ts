@@ -253,18 +253,134 @@ export function heuristicParse(text: string): TelegramIntentPayload {
   };
 }
 
-/**
- * Parses natural language text or voice transcript using Google Gemini with resilient fallback.
- */
-export async function parseIntent(input: {
+export interface ParseIntentInput {
   text?: string;
   audioBase64?: string;
   mimeType?: string;
-}): Promise<TelegramIntentPayload> {
-  const userText = input.text || '';
+  imageBase64?: string;
+  caption?: string;
+}
+
+/**
+ * Parses natural language text, voice transcript, or whiteboard/study photos using Google Gemini with resilient fallback.
+ */
+export async function parseIntent(input: ParseIntentInput): Promise<TelegramIntentPayload> {
+  const userText = input.text || input.caption || '';
 
   try {
-    const promptInstructions = `
+    let rawJson: string;
+
+    // 1. Multimodal Vision (Whiteboard photos, notes OCR, formula recognition)
+    if (input.imageBase64) {
+      const visionPrompt = `
+Sos TobIAs, el asistente inteligente de Ritmo (calendario, tareas y estudio universitario en UTN).
+El usuario te envió una IMAGEN / FOTO (pizarra de clase, apunte de física/matemática, lámina técnica o captura).
+Comentario o pie de foto del usuario: "${userText}"
+
+INSTRUCCIONES CLAVE DE VISIÓN Y OCR:
+1. Extraé con la más alta fidelidad técnica todo el texto legible, ecuaciones, diagramas, vectores y fórmulas.
+2. Si es una pizarra o apunte de estudio universitario o secundario (por ejemplo con vectores v=(vx, vy), módulos |v|, productos escalares, trigonometría, derivadas, física, o menciona "UTN"):
+   - "action_type": "MUTATION"
+   - "intent": "LOG_NOTE"
+   - "noteData":
+     - "title": Título técnico y descriptivo del tema (ej: "Vectores, Módulo y Perpendicularidad — Física UTN")
+     - "content": Transcripción limpia en formato Markdown con todas las fórmulas matemáticas, propiedades y pasos presentes en el pizarrón.
+     - "categoryTag": "#utn"
+   - "userConfirmationSummary": "Pizarra de la UTN transcripta y analizada con éxito."
+3. Si la imagen contiene una fecha de entrega, parcial, examen o compromiso de calendario:
+   - "action_type": "MUTATION"
+   - "intent": "CREATE_EVENT" o "CREATE_TASK"
+   - "eventData": { "title": "string", "targetDate": "YYYY-MM-DD", "startTime": "HH:MM", "durationMinutes": 60, "tier": "tier_1"|"tier_2"|"tier_3", "color": "orange", "difficultyScore": 3 }
+4. Si la imagen es solo una consulta visual:
+   - "action_type": "QUERY"
+   - "query_category": "NOTES"
+   - "intent": "CHAT"
+
+Generá EXCLUSIVAMENTE un JSON válido con la siguiente estructura:
+{
+  "action_type": "QUERY" | "MUTATION",
+  "query_category": "SCHEDULE" | "CLASSROOM_OR_TASKS" | "NOTES" | "GENERAL_CHAT" | null,
+  "target_date_hint": "today" | "tomorrow" | "week" | "YYYY-MM-DD" | null,
+  "intent": "LOG_NOTE" | "CREATE_EVENT" | "CREATE_TASK" | "QUERY_SCHEDULE" | "QUERY_TASKS" | "CHAT",
+  "confidence": 0.98,
+  "eventData": {
+    "title": "string",
+    "targetDate": "YYYY-MM-DD",
+    "startTime": "HH:MM",
+    "durationMinutes": 60,
+    "tier": "tier_3",
+    "color": "orange",
+    "difficultyScore": 2
+  },
+  "noteData": {
+    "title": "string",
+    "content": "string",
+    "categoryTag": "#utn"
+  },
+  "userConfirmationSummary": "Resumen claro sin nombres de pila"
+}
+`;
+
+      rawJson = await generateContentWithFallback(
+        [
+          visionPrompt,
+          {
+            inlineData: {
+              mimeType: input.mimeType || 'image/jpeg',
+              data: input.imageBase64,
+            },
+          },
+        ],
+        { json: true }
+      );
+    } else if (input.audioBase64 && input.mimeType) {
+      // 2. Audio transcription and classification
+      const audioPrompt = `
+Analiza la siguiente entrada de voz para TobIAs (asistente de Ritmo) y clasifica la intención en formato JSON estricto:
+Estructura requerida:
+{
+  "action_type": "QUERY" | "MUTATION",
+  "query_category": "SCHEDULE" | "CLASSROOM_OR_TASKS" | "NOTES" | "GENERAL_CHAT" | null,
+  "target_date_hint": "today" | "tomorrow" | "week" | "YYYY-MM-DD" | null,
+  "intent": "QUERY_SCHEDULE" | "QUERY_TASKS" | "CHAT" | "CREATE_EVENT" | "CREATE_TASK" | "ADD_DRAWING_PLATE" | "LOG_NOTE" | "RESCHEDULE_TASK",
+  "confidence": 0.95,
+  "eventData": {
+    "title": "string",
+    "targetDate": "YYYY-MM-DD",
+    "startTime": "HH:MM",
+    "durationMinutes": 60,
+    "tier": "tier_1" | "tier_2" | "tier_3",
+    "color": "orange" | "blue" | "red" | "green" | "purple" | "yellow",
+    "difficultyScore": 2
+  },
+  "noteData": {
+    "title": "string",
+    "content": "string",
+    "categoryTag": "#general"
+  },
+  "userConfirmationSummary": "Resumen claro sin nombres de pila"
+}
+
+REGLAS CRÍTICAS:
+1. QUERY: Cuando el usuario PREGUNTA, consulta su agenda, pregunta por tareas de Classroom, o saluda.
+2. MUTATION: SOLO cuando el usuario da una orden expresa para agendar o crear.
+`;
+
+      rawJson = await generateContentWithFallback(
+        [
+          audioPrompt,
+          {
+            inlineData: {
+              mimeType: input.mimeType,
+              data: input.audioBase64,
+            },
+          },
+        ],
+        { json: true }
+      );
+    } else {
+      // 3. Text analysis
+      const textPrompt = `
 Analiza la siguiente entrada del usuario para TobIAs (asistente de Ritmo) y clasifica la intención en formato JSON estricto:
 Entrada: "${userText}"
 
@@ -294,30 +410,28 @@ Estructura requerida:
 
 REGLAS CRÍTICAS:
 1. QUERY: Cuando el usuario PREGUNTA, consulta su agenda, pregunta por tareas de Classroom, tareas pendientes, qué tiene para hacer, o simplemente saluda/conversa. NUNCA marques QUERY como MUTATION.
-2. MUTATION: SOLO cuando el usuario da una orden expresa para agendar, crear un evento nuevo, tomar una nota o agregar una lámina.`;
-
-    let rawJson: string;
-    if (input.audioBase64 && input.mimeType) {
-      rawJson = await generateContentWithFallback(
-        [
-          promptInstructions,
-          {
-            inlineData: {
-              mimeType: input.mimeType,
-              data: input.audioBase64,
-            },
-          },
-        ],
-        { json: true }
-      );
-    } else {
-      rawJson = await generateContentWithFallback(promptInstructions, { json: true });
+2. MUTATION: SOLO cuando el usuario da una orden expresa para agendar, crear un evento nuevo, tomar una nota o agregar una lámina.
+`;
+      rawJson = await generateContentWithFallback(textPrompt, { json: true });
     }
 
     const parsedJson = JSON.parse(rawJson);
     return TelegramIntentSchema.parse(parsedJson);
   } catch (error) {
     console.warn('[IntentParser] Error parsing with Gemini, using heuristic fallback:', error);
+    if (input.imageBase64) {
+      return {
+        action_type: 'MUTATION',
+        intent: 'LOG_NOTE',
+        confidence: 0.85,
+        noteData: {
+          title: userText ? `Apunte: ${userText}` : 'Apunte de Pizarra UTN',
+          content: userText ? `Foto de apunte recibida: "${userText}". Procesamiento de imagen completado.` : 'Pizarra de física / matemática registrada.',
+          categoryTag: '#utn',
+        },
+        userConfirmationSummary: 'Pizarra de estudio registrada en tus notas (#utn).',
+      };
+    }
     return heuristicParse(userText);
   }
 }

@@ -31,6 +31,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ExternalLink,
+  Bell,
 } from 'lucide-react';
 import { generateRealOctoberEvents, generateRealNotes } from '@/lib/seed-data';
 import { supabaseBrowserClient } from '@/lib/supabase/client';
@@ -58,6 +59,34 @@ export default function RitmoMainPage() {
   const [classroomCount, setClassroomCount] = useState<number>(0);
   const [isSyncingClassroom, setIsSyncingClassroom] = useState<boolean>(false);
   const [classroomFeedback, setClassroomFeedback] = useState<string | null>(null);
+
+  // Mobile / Browser Push Notification State
+  const [notificationPermission, setNotificationPermission] = useState<string>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleRequestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Las notificaciones del sistema no están soportadas en este navegador.');
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      setNotificationPermission(perm);
+      if (perm === 'granted') {
+        new Notification('🔔 Ritmo — Notificaciones Activadas', {
+          body: '¡Listo! Recibirás alertas invasivas de entregas urgentes de Classroom y parciales.',
+          icon: '/icons/icon-192.png',
+        });
+      }
+    } catch (e) {
+      console.warn('Error requesting notification permission:', e);
+    }
+  };
 
   // Modals state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
@@ -151,6 +180,28 @@ export default function RitmoMainPage() {
             );
             return [...prev, ...toAdd];
           });
+
+          // Proactive native device notification for imminent Classroom deliveries
+          if (
+            typeof window !== 'undefined' &&
+            'Notification' in window &&
+            Notification.permission === 'granted'
+          ) {
+            const now = new Date();
+            const imminent = classroomEvents.find((ce) => {
+              const due = new Date(`${ce.event_date}T${ce.start_time}`);
+              const diffHours = (due.getTime() - now.getTime()) / (1000 * 60 * 60);
+              return diffHours > 0 && diffHours <= 36;
+            });
+
+            if (imminent && !sessionStorage.getItem(`notified_${imminent.id}`)) {
+              sessionStorage.setItem(`notified_${imminent.id}`, 'true');
+              new Notification('🚨 Ritmo: Entrega Inminente de Classroom', {
+                body: `${imminent.title} vence pronto. ¡No te cuelgues!`,
+                icon: '/icons/icon-192.png',
+              });
+            }
+          }
         }
       } catch (err) {
         console.warn('Supabase no conectado aún; usando dataset real local.', err);
@@ -593,6 +644,50 @@ export default function RitmoMainPage() {
                     <p className="text-[11px] font-medium text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
                       {classroomFeedback}
                     </p>
+                  )}
+                </div>
+
+                {/* Mobile / Device Push Notifications */}
+                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-ritmo-purple" />
+                      <div>
+                        <p className="font-bold text-ritmo-ink">Notificaciones en el Celular</p>
+                        <p className="text-[11px] text-ritmo-muted">
+                          {notificationPermission === 'granted'
+                            ? 'Alertas activas para entregas y exámenes'
+                            : notificationPermission === 'denied'
+                            ? 'Bloqueadas en ajustes de tu navegador'
+                            : 'Avisos directos en tu pantalla de bloqueo'}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        notificationPermission === 'granted'
+                          ? 'bg-green-50 text-ritmo-green border-green-200'
+                          : notificationPermission === 'denied'
+                          ? 'bg-red-50 text-ritmo-red border-red-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {notificationPermission === 'granted'
+                        ? 'Activas'
+                        : notificationPermission === 'denied'
+                        ? 'Bloqueadas'
+                        : 'Pendiente'}
+                    </span>
+                  </div>
+
+                  {notificationPermission !== 'granted' && (
+                    <button
+                      onClick={handleRequestNotificationPermission}
+                      className="w-full py-2 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all"
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                      🔔 Activar Notificaciones en este Dispositivo
+                    </button>
                   )}
                 </div>
               </div>

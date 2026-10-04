@@ -4,6 +4,13 @@ import { sendTelegramMessage } from '../telegram/bot';
 import { AlertCadence, CalendarEvent } from '../../types/database.types';
 import { timeStringToMinutes } from '../date-utils';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 export interface SacredTier1Rule {
   name: string;
   daysOfWeek: number[]; // 0=Domingo, 1=Lunes, ..., 6=Sábado
@@ -345,6 +352,70 @@ export async function dispatchPendingAlerts(referenceDate?: Date): Promise<Dispa
       dispatchedAlerts.push({
         id: ev.id,
         title: ev.title,
+        cadence: matchingCadence.cadence,
+      });
+    }
+  }
+
+  // 5. Query upcoming Classroom assignments within next 7 days
+  const { data: upcomingClassroom } = await supabase
+    .from('classroom_sync')
+    .select('*')
+    .gte('due_date', now.toISOString())
+    .lte('due_date', futureDate.toISOString())
+    .order('due_date', { ascending: true });
+
+  if (upcomingClassroom && upcomingClassroom.length > 0) {
+    for (const c of upcomingClassroom) {
+      if (!c.due_date) continue;
+      const dueDate = new Date(c.due_date);
+      const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (diffHours < 0) continue; // Already passed
+
+      const matchingCadence = CADENCE_CONFIG.find(
+        (cad) => diffHours >= cad.minHours && diffHours <= cad.maxHours
+      );
+
+      if (!matchingCadence) continue;
+
+      const alertKey = `classroom:${c.coursework_id}:${matchingCadence.cadence}`;
+
+      // Check if alert already sent using audit_logs deduplication
+      const { data: alreadyAlerted } = await supabase
+        .from('audit_logs')
+        .select('id')
+        .eq('entity_type', 'classroom_alert')
+        .eq('entity_id', alertKey)
+        .maybeSingle();
+
+      if (alreadyAlerted) {
+        continue;
+      }
+
+      if (recipientChatId) {
+        const alertMsg = `🚨🚨 <b>¡ALERTA DE ENTREGA DE CLASSROOM! [${matchingCadence.label}]</b> 🚨🚨\n\n📚 <b>${escapeHtml(c.course_name)}</b>\n📝 <b>${escapeHtml(c.title)}</b>\n⏰ Vence: <b>${format(dueDate, 'dd/MM HH:mm')} hs</b>\n⏳ Faltan aprox.: <b>${Math.max(1, Math.round(diffHours))} horas</b>\n${c.alternate_link ? `🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n\n` : '\n'}<i>¡No te cuelgues! Asegurate de tenerlo listo y entregado.</i>`;
+
+        await sendTelegramMessage(recipientChatId, alertMsg);
+      }
+
+      await supabase.from('audit_logs').insert({
+        action: 'dispatch_classroom_alert',
+        entity_type: 'classroom_alert',
+        entity_id: alertKey,
+        performed_by: 'tobias_notification_dispatcher',
+        old_state: null,
+        new_state: {
+          coursework_id: c.coursework_id,
+          title: c.title,
+          due_date: c.due_date,
+          cadence: matchingCadence.cadence,
+        },
+      });
+
+      dispatchedAlerts.push({
+        id: c.coursework_id,
+        title: `[Classroom] ${c.title}`,
         cadence: matchingCadence.cadence,
       });
     }

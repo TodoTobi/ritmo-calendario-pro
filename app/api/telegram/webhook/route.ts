@@ -9,6 +9,7 @@ import {
   downloadTelegramFile,
 } from '@/lib/telegram/bot';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { syncUtnNotesToDrive } from '@/lib/drive/sync';
 import { timeStringToMinutes, minutesToTimeString } from '@/lib/date-utils';
 import { createProblemResponse } from '@/lib/rfc7807';
 
@@ -17,6 +18,78 @@ function escapeHtml(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/**
+ * Detects upcoming deadlines within next 36 hours from Classroom and Tasks
+ * and constructs an unmissable, insistent alert banner.
+ */
+async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
+  try {
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const limitDate = new Date(now.getTime() + 36 * 3600 * 1000);
+
+    // 1. Query classroom_sync for pending deliveries
+    const { data: upcomingClassroom } = await supabase
+      .from('classroom_sync')
+      .select('*')
+      .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
+      .lte('due_date', limitDate.toISOString())
+      .order('due_date', { ascending: true })
+      .limit(3);
+
+    // 2. Query pending tasks
+    const { data: upcomingTasks } = await supabase
+      .from('tasks')
+      .select('*')
+      .neq('status', 'completed')
+      .gte('due_date', todayStr)
+      .lte('due_date', format(limitDate, 'yyyy-MM-dd'))
+      .order('due_date', { ascending: true })
+      .limit(3);
+
+    const hasClassroom = upcomingClassroom && upcomingClassroom.length > 0;
+    const hasTasks = upcomingTasks && upcomingTasks.length > 0;
+
+    if (!hasClassroom && !hasTasks) {
+      return null;
+    }
+
+    let banner = '🚨🚨 <b>¡ALERTA DE ENTREGA INMINENTE!</b> 🚨🚨\n';
+    banner += '⚠️ <i>¡Ojo, no te cuelgues! Tenés compromisos por vencer muy pronto:</i>\n\n';
+
+    if (hasClassroom) {
+      for (const c of upcomingClassroom) {
+        const dObj = c.due_date ? new Date(c.due_date) : null;
+        const dStr = dObj ? format(dObj, 'dd/MM HH:mm') : 'Sin hora fija';
+        const isTomorrow =
+          dObj && format(dObj, 'yyyy-MM-dd') === format(addDays(now, 1), 'yyyy-MM-dd');
+        const isToday = dObj && format(dObj, 'yyyy-MM-dd') === todayStr;
+        const tag = isToday ? '🔴 <b>HOY</b>' : isTomorrow ? '⚠️ <b>MAÑANA</b>' : '🗓';
+
+        banner += `${tag} <b>${dStr} hs</b> — <i>${escapeHtml(c.course_name)}</i>\n`;
+        banner += `   📝 <b>${escapeHtml(c.title)}</b>\n`;
+        if (c.alternate_link) {
+          banner += `   🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n`;
+        }
+        banner += '\n';
+      }
+    }
+
+    if (hasTasks) {
+      for (const t of upcomingTasks) {
+        if (t.classroom_coursework_id) continue;
+        banner += `📌 <b>${escapeHtml(t.title)}</b> (Vence: ${t.due_date || 'Próximamente'})\n`;
+      }
+    }
+
+    banner += '<i>¡Asegurate de tenerlo listo y entregado a tiempo!</i>';
+    return banner.trim();
+  } catch (err) {
+    console.warn('[Webhook] Error building urgent deadline notice:', err);
+    return null;
+  }
 }
 
 /**
@@ -143,6 +216,8 @@ async function handleChatbotQuery(
 
   // 3. GENERAL CHAT OR NOTES QUERY
   try {
+    const urgentNotice = await getUrgentDeadlineNotice(supabase);
+
     const chatPrompt = `
 Sos TobIAs, el asistente inteligente de Ritmo (calendario, tareas y enfoque personal para un estudiante técnico de secundaria y aspirante a ingeniería en la UTN).
 El usuario te escribió en Telegram: "${userText}"
@@ -153,13 +228,22 @@ Contexto actual del sistema:
 - NO uses nombres de pila personales.
 - Podés explicarle tus capacidades si pregunta: gestionás su agenda, alertás entregas de Google Classroom y guardás notas de voz o texto.
 `;
-    const aiResponse = await generateContentWithFallback(chatPrompt);
+    let aiResponse = await generateContentWithFallback(chatPrompt);
+
+    if (urgentNotice) {
+      aiResponse = `${urgentNotice}\n\n----------------------------------------\n\n${aiResponse}`;
+    }
+
     await sendTelegramMessage(chatId, aiResponse);
     return aiResponse;
   } catch (err) {
     console.error('[Webhook] Error generating general AI response:', err);
-    const fallbackMsg =
+    let fallbackMsg =
       '¡Hola! Soy TobIAs. Podés consultarme tu agenda (/hoy), tus tareas de Classroom o enviarme notas y compromisos para agendar.';
+    const urgentNotice = await getUrgentDeadlineNotice(supabase);
+    if (urgentNotice) {
+      fallbackMsg = `${urgentNotice}\n\n----------------------------------------\n\n${fallbackMsg}`;
+    }
     await sendTelegramMessage(chatId, fallbackMsg);
     return fallbackMsg;
   }
@@ -456,18 +540,24 @@ export async function POST(req: NextRequest) {
 
     const text = message.text;
     const voice = message.voice;
+    const photo = message.photo;
+    const caption = message.caption;
+
+    const supabase = getSupabaseServerClient();
+    const urgentNotice = await getUrgentDeadlineNotice(supabase);
 
     // A. Handle Bot Commands
     if (text === '/start' || text === '/ayuda') {
-      await sendTelegramMessage(
-        chatId,
-        '👋 <b>¡Hola!</b> Soy <b>TobIAs</b>, tu asistente de calendario y enfoque personal con IA.\n\nPodés enviarme:\n🎙 <b>Notas de voz</b> con compromisos, láminas o ideas\n📷 <b>Fotos de pizarrones</b> con fechas y fórmulas\n💬 <b>Mensajes de texto</b> directos\n\nComandos rápidos:\n• /hoy — Tu agenda para hoy\n• /ayuda — Guía rápida de uso'
-      );
+      let welcomeMsg =
+        '👋 <b>¡Hola!</b> Soy <b>TobIAs</b>, tu asistente de calendario y enfoque personal con IA.\n\nPodés enviarme:\n🎙 <b>Notas de voz</b> con compromisos, láminas o ideas\n📷 <b>Fotos de pizarrones</b> con fechas y fórmulas\n💬 <b>Mensajes de texto</b> directos\n\nComandos rápidos:\n• /hoy — Tu agenda para hoy\n• /ayuda — Guía rápida de uso';
+      if (urgentNotice) {
+        welcomeMsg = `${urgentNotice}\n\n----------------------------------------\n\n${welcomeMsg}`;
+      }
+      await sendTelegramMessage(chatId, welcomeMsg);
       return NextResponse.json({ ok: true, command: text });
     }
 
     if (text === '/hoy') {
-      const supabase = getSupabaseServerClient();
       const today = format(new Date(), 'yyyy-MM-dd');
       const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
 
@@ -484,7 +574,12 @@ export async function POST(req: NextRequest) {
         .lte('due_date', `${tomorrow}T23:59:59.999Z`)
         .order('due_date', { ascending: true });
 
-      let scheduleText = `📅 <b>Agenda de Hoy (${today}):</b>\n\n`;
+      let scheduleText = '';
+      if (urgentNotice) {
+        scheduleText += `${urgentNotice}\n\n----------------------------------------\n\n`;
+      }
+
+      scheduleText += `📅 <b>Agenda de Hoy (${today}):</b>\n\n`;
       if (!todayEvents || todayEvents.length === 0) {
         scheduleText += '<i>No tienes compromisos agendados para hoy.</i>\n\n';
       } else {
@@ -513,7 +608,138 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, command: '/hoy' });
     }
 
-    // B. Handle Voice Message
+    // B. Handle Photo / Whiteboard Image
+    if (photo && photo.length > 0) {
+      const largestPhoto = photo[photo.length - 1];
+      const photoBuffer = await downloadTelegramFile(largestPhoto.file_id);
+      const imageBase64 = photoBuffer.toString('base64');
+      const userCaption = caption || '';
+
+      // Log user incoming photo
+      await supabase.from('telegram_conversations').insert({
+        chat_id: chatId,
+        message_id: message.message_id,
+        role: 'user',
+        content: userCaption ? `[Foto recibida]: ${userCaption}` : '[Foto/Pizarra recibida]',
+        media_url: largestPhoto.file_id,
+      });
+
+      // Multimodal OCR analysis with Gemini
+      const parsedIntent = await parseIntent({
+        imageBase64,
+        mimeType: 'image/jpeg',
+        caption: userCaption,
+        text: userCaption,
+      });
+
+      // 1. If note or study whiteboard -> save to Supabase and trigger Drive sync for #utn
+      if (parsedIntent.intent === 'LOG_NOTE' && parsedIntent.noteData) {
+        const { title, content, categoryTag } = parsedIntent.noteData;
+        const finalTag =
+          categoryTag ||
+          (userCaption.toLowerCase().includes('utn') ? '#utn' : '#general');
+
+        const { data: insertedNote, error: insertErr } = await supabase
+          .from('notes')
+          .insert({
+            title,
+            content_markdown: content,
+            category_tag: finalTag,
+            is_completed: false,
+            synced_to_drive: false,
+          })
+          .select()
+          .single();
+
+        if (insertErr) {
+          console.error('[Webhook] Error inserting note from photo:', insertErr);
+        }
+
+        // Trigger Google Drive sync for UTN study materials
+        if (finalTag === '#utn' || userCaption.toLowerCase().includes('utn')) {
+          try {
+            await syncUtnNotesToDrive();
+          } catch (driveErr) {
+            console.warn('[Webhook] Background Drive sync warning:', driveErr);
+          }
+        }
+
+        let replyMsg = `📸 <b>¡Pizarra / Apunte analizado por TobIAs!</b>\n\n`;
+        replyMsg += `📝 <b>${escapeHtml(title)}</b>\n`;
+        replyMsg += `🏷 <code>${escapeHtml(finalTag)}</code>\n\n`;
+        replyMsg += `<b>Transcripción y fórmulas detectadas:</b>\n${escapeHtml(content)}\n\n`;
+        replyMsg += `✅ <i>Guardado en tus notas de Ritmo y sincronizado con tu carpeta de Google Drive para NotebookLM.</i>`;
+
+        if (urgentNotice) {
+          replyMsg = `${urgentNotice}\n\n----------------------------------------\n\n${replyMsg}`;
+        }
+
+        await sendTelegramMessage(chatId, replyMsg);
+
+        await supabase.from('telegram_conversations').insert({
+          chat_id: chatId,
+          message_id: Date.now(),
+          role: 'assistant',
+          content: replyMsg,
+          intent_detected: JSON.stringify(parsedIntent),
+        });
+
+        return NextResponse.json({
+          ok: true,
+          handled: 'photo_note',
+          note: insertedNote,
+          intent: parsedIntent,
+        });
+      }
+
+      // 2. If calendar event or task detected from photo
+      if (
+        parsedIntent.intent === 'CREATE_EVENT' ||
+        parsedIntent.intent === 'CREATE_TASK'
+      ) {
+        if (urgentNotice) {
+          await sendTelegramMessage(chatId, urgentNotice);
+        }
+        const sentCard = await sendConfirmationCard(chatId, parsedIntent);
+
+        await supabase.from('telegram_conversations').insert({
+          chat_id: chatId,
+          message_id: sentCard.result?.message_id || Date.now(),
+          role: 'assistant',
+          content: parsedIntent.userConfirmationSummary,
+          intent_detected: JSON.stringify(parsedIntent),
+        });
+
+        return NextResponse.json({
+          ok: true,
+          handled: 'photo_mutation',
+          intent: parsedIntent,
+        });
+      }
+
+      // 3. Fallback: Query or general visual discussion
+      const queryResponse = await handleChatbotQuery(
+        chatId,
+        userCaption || parsedIntent.userConfirmationSummary,
+        parsedIntent
+      );
+
+      await supabase.from('telegram_conversations').insert({
+        chat_id: chatId,
+        message_id: Date.now(),
+        role: 'assistant',
+        content: queryResponse,
+        intent_detected: JSON.stringify(parsedIntent),
+      });
+
+      return NextResponse.json({
+        ok: true,
+        handled: 'photo_query',
+        intent: parsedIntent,
+      });
+    }
+
+    // C. Handle Voice Message
     if (voice) {
       const audioBuffer = await downloadTelegramFile(voice.file_id);
       const audioBase64 = audioBuffer.toString('base64');
@@ -523,8 +749,6 @@ export async function POST(req: NextRequest) {
         audioBase64,
         mimeType,
       });
-
-      const supabase = getSupabaseServerClient();
 
       // Log user voice message
       await supabase.from('telegram_conversations').insert({
@@ -556,6 +780,9 @@ export async function POST(req: NextRequest) {
       }
 
       // Mutation: Send confirmation card with inline keyboard
+      if (urgentNotice) {
+        await sendTelegramMessage(chatId, urgentNotice);
+      }
       const sentCard = await sendConfirmationCard(chatId, parsedIntent);
 
       // Log assistant card with intent_detected
@@ -574,13 +801,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // C. Handle Text Message
+    // D. Handle Text Message
     if (text) {
       const parsedIntent = await parseIntent({
         text,
       });
-
-      const supabase = getSupabaseServerClient();
 
       // Log user text
       await supabase.from('telegram_conversations').insert({
@@ -610,6 +835,9 @@ export async function POST(req: NextRequest) {
       }
 
       // 2. Action / Mutation -> Send confirmation card with inline keyboard
+      if (urgentNotice) {
+        await sendTelegramMessage(chatId, urgentNotice);
+      }
       const sentCard = await sendConfirmationCard(chatId, parsedIntent);
 
       // Log assistant response
