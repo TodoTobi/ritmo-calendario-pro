@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Sparkles, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Sparkles, Filter, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface TopHeaderProps {
   currentDateText: string;
@@ -9,6 +9,7 @@ interface TopHeaderProps {
   onSearchClick: () => void;
   isFocusMode: boolean;
   onToggleFocusMode: () => void;
+  onOpenMonthYearPicker?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -19,16 +20,25 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onSearchClick,
   isFocusMode,
   onToggleFocusMode,
+  onOpenMonthYearPicker,
 }) => {
   return (
     <header className="sticky top-0 z-20 flex flex-col border-b border-ritmo-line/80 bg-white/95 px-4 pt-3 pb-2.5 backdrop-blur-md">
       <div className="flex items-center justify-between gap-2">
         {/* Month Title & Chevron Navigation */}
         <div className="flex items-center gap-1 min-w-0">
-          <h1 className="font-manrope text-xl font-extrabold tracking-tight text-ritmo-ink capitalize truncate">
-            {currentDateText}
-          </h1>
-          <div className="flex items-center ml-1">
+          <button
+            type="button"
+            onClick={onOpenMonthYearPicker}
+            aria-label={`Seleccionar mes y año, actualmente ${currentDateText}`}
+            className="group flex items-center gap-1 text-left rounded-xl py-1 px-1.5 -ml-1.5 transition-colors hover:bg-ritmo-soft active:scale-[0.98]"
+          >
+            <h1 className="font-manrope text-xl font-extrabold tracking-tight text-ritmo-ink capitalize truncate group-hover:text-ritmo-purple transition-colors">
+              {currentDateText}
+            </h1>
+            <ChevronDown className="w-4 h-4 text-ritmo-muted group-hover:text-ritmo-purple transition-colors shrink-0" />
+          </button>
+          <div className="flex items-center ml-0.5">
             <button
               type="button"
               onClick={onPrevMonth}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   getMonthDaysGrid,
   getWeekDaysStrip,
@@ -9,7 +9,7 @@ import {
 } from '@/lib/date-utils';
 import { CalendarEvent } from '@/types/database.types';
 import { EVENT_COLOR_MAP } from '@/lib/color-tokens';
-import { ChevronDown, ChevronUp, ArrowDown } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface MonthHeaderCollapsibleProps {
   currentDate: Date;
@@ -17,6 +17,8 @@ interface MonthHeaderCollapsibleProps {
   events: CalendarEvent[];
   onSelectDate: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
+  onPrevMonth?: () => void;
+  onNextMonth?: () => void;
 }
 
 export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
@@ -25,8 +27,11 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
   events,
   onSelectDate,
   onEventClick,
+  onPrevMonth,
+  onNextMonth,
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const monthGridDays = getMonthDaysGrid(currentDate);
   const weekStripDays = getWeekDaysStrip(selectedDate);
@@ -47,8 +52,52 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
     onSelectDate(day);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || e.changedTouches.length === 0) return;
+
+    const diffX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const diffY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    const absX = Math.abs(diffX);
+    const absY = Math.abs(diffY);
+
+    // CRITICAL CONSTRAINT: DO NOT make it overly sensitive!
+    // Threshold: Require at least 75px of horizontal distance (Math.abs(diffX) > 75)
+    // AND enforce horizontal dominance (Math.abs(diffX) > Math.abs(diffY) * 1.6)
+    // so vertical scrolling through the page does NOT trigger an accidental month change.
+    if (absX > 75 && absX > absY * 1.6) {
+      if (diffX < 0) {
+        // Swipe left -> Next Month
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(15);
+        }
+        onNextMonth?.();
+      } else {
+        // Swipe right -> Previous Month
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(15);
+        }
+        onPrevMonth?.();
+      }
+    }
+  };
+
   return (
-    <div className="w-full bg-white border-b border-ritmo-line shadow-sm transition-all duration-300">
+    <div
+      className="w-full bg-white border-b border-ritmo-line shadow-sm transition-all duration-300 touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Weekday Labels Header */}
       <div className="grid grid-cols-7 border-b border-ritmo-line/70 bg-ritmo-soft/60 px-1 py-1.5 text-center">
         {weekDayHeaders.map((header) => (
@@ -166,7 +215,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
         })}
       </div>
 
-      {/* Bottom Bar: Toggle Button + Scroll Down Cue */}
+      {/* Bottom Bar: Clean Toggle Button */}
       <div className="flex items-center justify-between px-4 py-2 bg-ritmo-soft/50 border-t border-ritmo-line/60">
         <button
           type="button"
@@ -186,10 +235,9 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
           )}
         </button>
 
-        <div className="flex items-center gap-1 text-[11px] font-bold text-ritmo-muted animate-pulse">
-          <span>Desliza abajo para la agenda</span>
-          <ArrowDown className="w-3.5 h-3.5 text-ritmo-purple" />
-        </div>
+        <span className="text-[10px] font-medium text-ritmo-muted/70 tracking-wide select-none">
+          ← Desliza para cambiar mes →
+        </span>
       </div>
     </div>
   );

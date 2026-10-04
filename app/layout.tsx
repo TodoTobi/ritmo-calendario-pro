@@ -17,13 +17,25 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Ritmo — Calendario & Anotador Personal Inteligente',
+  title: 'Ritmo — Calendario & Enfoque',
   description: 'Sistema monousuario de productividad, calendario táctil y notas inteligentes con Gemini y Telegram.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Ritmo',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
   formatDetection: {
     telephone: false,

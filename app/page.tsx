@@ -10,6 +10,7 @@ import { TactileTimeline } from '@/components/timeline/TactileTimeline';
 import { NotesContainer } from '@/components/notes/NotesContainer';
 import { QuickAddModal } from '@/components/modals/QuickAddModal';
 import { EventDetailModal } from '@/components/modals/EventDetailModal';
+import { MonthYearPickerModal } from '@/components/modals/MonthYearPickerModal';
 import { CalendarEvent, NoteItem } from '@/types/database.types';
 import {
   formatDateSafe,
@@ -54,6 +55,7 @@ export default function RitmoMainPage() {
   // Modals state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
   const [selectedEventForModal, setSelectedEventForModal] = useState<CalendarEvent | null>(null);
+  const [isMonthYearPickerOpen, setIsMonthYearPickerOpen] = useState<boolean>(false);
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
 
@@ -157,6 +159,16 @@ export default function RitmoMainPage() {
 
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
+  };
+
+  const handleSelectMonthYear = (year: number, monthIndex: number) => {
+    const newMonthDate = new Date(year, monthIndex, 1, 12, 0, 0);
+    setCurrentDate(newMonthDate);
+    const maxDays = new Date(year, monthIndex + 1, 0).getDate();
+    const currentDay = selectedDate.getDate();
+    const clampedDay = Math.min(currentDay, maxDays);
+    setSelectedDate(new Date(year, monthIndex, clampedDay, 12, 0, 0));
+    setIsMonthYearPickerOpen(false);
   };
 
   const handleCreateEvent = async (
@@ -279,28 +291,28 @@ export default function RitmoMainPage() {
         onTodayClick={handleTodayClick}
         onSearchClick={() => {}}
         onToggleFocusMode={() => setIsFocusMode((prev) => !prev)}
+        onOpenMonthYearPicker={() => setIsMonthYearPickerOpen(true)}
       />
 
       {/* Main Content Area based on Active Bottom Tab */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {activeTab === 'calendar' && (
           <div className="flex-1 overflow-y-auto pb-24 scroll-smooth">
-            {/* Full-Screen Hero Month View */}
+            {/* Full-Screen Hero Month View with swipe navigation */}
             <MonthHeaderCollapsible
               currentDate={currentDate}
               selectedDate={selectedDate}
               events={displayedEvents}
               onSelectDate={handleSelectDate}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
             />
 
             {/* Continuous Vertical Feed of Days and Events */}
             <div className="border-t border-ritmo-line/80 bg-white">
-              <div className="px-4 py-3 bg-ritmo-soft flex items-center justify-between border-b border-ritmo-line">
-                <span className="text-xs font-bold uppercase tracking-wider text-ritmo-muted">
-                  Agenda del Mes Completo
-                </span>
-                <span className="text-[11px] font-semibold text-ritmo-purple">
-                  Desliza hacia abajo ↓
+              <div className="px-4 py-2.5 bg-ritmo-soft/60 flex items-center justify-between border-b border-ritmo-line">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-ritmo-muted font-manrope">
+                  Agenda del Mes
                 </span>
               </div>
               <AgendaFeed
@@ -495,6 +507,13 @@ export default function RitmoMainPage() {
         isOpen={Boolean(selectedEventForModal)}
         onClose={() => setSelectedEventForModal(null)}
         onDelete={handleDeleteEvent}
+      />
+
+      <MonthYearPickerModal
+        isOpen={isMonthYearPickerOpen}
+        onClose={() => setIsMonthYearPickerOpen(false)}
+        currentDate={currentDate}
+        onSelectMonthYear={handleSelectMonthYear}
       />
     </div>
   );
