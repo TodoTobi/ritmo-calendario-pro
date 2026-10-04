@@ -9,13 +9,14 @@ import {
 } from '@/lib/date-utils';
 import { CalendarEvent } from '@/types/database.types';
 import { EVENT_COLOR_MAP } from '@/lib/color-tokens';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowDown } from 'lucide-react';
 
 interface MonthHeaderCollapsibleProps {
   currentDate: Date;
   selectedDate: Date;
   events: CalendarEvent[];
   onSelectDate: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
 }
 
 export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
@@ -23,6 +24,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
   selectedDate,
   events,
   onSelectDate,
+  onEventClick,
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
@@ -30,7 +32,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
   const weekStripDays = getWeekDaysStrip(selectedDate);
   const displayedDays = isExpanded ? monthGridDays : weekStripDays;
 
-  const weekDayHeaders = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const weekDayHeaders = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   // Helper to find events on a given day
   const getDayEvents = (day: Date) => {
@@ -46,23 +48,25 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
   };
 
   return (
-    <div className="bg-white border-b border-ritmo-line/80 px-3 pt-2 pb-1 shadow-sm transition-all duration-200">
-      {/* Day of Week Label Headers */}
-      <div className="grid grid-cols-7 mb-1 text-center">
-        {weekDayHeaders.map((letter, i) => (
+    <div className="w-full bg-white border-b border-ritmo-line shadow-sm transition-all duration-300">
+      {/* Weekday Labels Header */}
+      <div className="grid grid-cols-7 border-b border-ritmo-line/70 bg-ritmo-soft/60 px-1 py-1.5 text-center">
+        {weekDayHeaders.map((header) => (
           <span
-            key={`${letter}-${i}`}
-            className="text-[11px] font-bold text-ritmo-muted uppercase tracking-wider py-0.5"
+            key={header}
+            className="text-[10px] font-extrabold text-ritmo-muted uppercase tracking-wider font-manrope"
           >
-            {letter}
+            {header}
           </span>
         ))}
       </div>
 
-      {/* Grid of Days */}
+      {/* Grid of Days — Hero Full-Height View */}
       <div
-        className={`grid grid-cols-7 gap-y-1 transition-all duration-200 ${
-          isExpanded ? 'min-h-[190px]' : 'min-h-[44px]'
+        className={`grid grid-cols-7 divide-x divide-y divide-ritmo-line/60 transition-all duration-300 ${
+          isExpanded
+            ? 'min-h-[calc(100dvh-200px)] md:min-h-[560px]'
+            : 'min-h-[70px]'
         }`}
       >
         {displayedDays.map((day) => {
@@ -72,64 +76,120 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
           const dayEvents = getDayEvents(day);
 
           return (
-            <button
+            <div
               key={day.toISOString()}
-              type="button"
               onClick={() => handleDayClick(day)}
-              className={`group flex flex-col items-center justify-center py-1 rounded-full relative transition-transform active:scale-90 ${
+              className={`group flex flex-col p-1 sm:p-1.5 transition-colors relative cursor-pointer select-none ${
+                isExpanded ? 'min-h-[72px] sm:min-h-[88px]' : 'min-h-[64px]'
+              } ${
                 isSelected
-                  ? 'bg-ritmo-purple text-white shadow-sm font-extrabold'
+                  ? 'bg-ritmo-purple/5 ring-2 ring-inset ring-ritmo-purple'
                   : isCurrentDay
-                  ? 'border border-ritmo-purple text-ritmo-purple font-bold'
-                  : isCurrentMonthDay
-                  ? 'text-ritmo-ink hover:bg-ritmo-soft font-semibold'
-                  : 'text-ritmo-muted/40 font-normal'
+                  ? 'bg-[#fbfaff]'
+                  : !isCurrentMonthDay
+                  ? 'bg-ritmo-soft/40 opacity-45'
+                  : 'hover:bg-ritmo-soft/80 bg-white'
               }`}
             >
-              <span className="text-xs">{format(day, 'd')}</span>
+              {/* Date Header inside Cell */}
+              <div className="flex items-center justify-between mb-1">
+                <span
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg text-[11px] sm:text-xs font-manrope font-bold flex items-center justify-center transition-transform ${
+                    isSelected
+                      ? 'bg-ritmo-purple text-white shadow-sm font-extrabold scale-105'
+                      : isCurrentDay
+                      ? 'bg-ritmo-ink text-white font-extrabold'
+                      : isCurrentMonthDay
+                      ? 'text-ritmo-ink'
+                      : 'text-ritmo-muted'
+                  }`}
+                >
+                  {format(day, 'd')}
+                </span>
 
-              {/* Event Category Indicator Dots (Up to 3 dots) */}
-              <div className="flex items-center gap-0.5 mt-0.5 h-1.5">
-                {dayEvents.slice(0, 3).map((ev) => {
-                  const colorScheme = EVENT_COLOR_MAP[ev.color];
-                  return (
-                    <span
-                      key={ev.id}
-                      className={`w-1.5 h-1.5 rounded-full transition-opacity ${
-                        isSelected ? 'bg-white' : ''
-                      }`}
-                      style={{
-                        backgroundColor: isSelected ? '#ffffff' : colorScheme.accent,
-                      }}
-                    />
-                  );
-                })}
+                {/* Event Count pill if there are many */}
+                {dayEvents.length > 2 && isExpanded && (
+                  <span className="text-[9px] font-bold text-ritmo-muted px-1 rounded-full bg-ritmo-soft hidden sm:inline-block">
+                    +{dayEvents.length - 2}
+                  </span>
+                )}
               </div>
-            </button>
+
+              {/* Event Previews inside Cell */}
+              {isExpanded ? (
+                <div className="flex flex-col gap-1 overflow-hidden flex-1">
+                  {dayEvents.slice(0, 2).map((ev) => {
+                    const colorScheme = EVENT_COLOR_MAP[ev.color] || EVENT_COLOR_MAP.orange;
+                    return (
+                      <div
+                        key={ev.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectDate(day);
+                          if (onEventClick) onEventClick(ev);
+                        }}
+                        className={`group/pill flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold truncate transition-transform hover:scale-[1.02] border border-black/5 ${colorScheme.bg} ${colorScheme.text}`}
+                        title={`${ev.start_time.slice(0, 5)} ${ev.title}`}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: colorScheme.accent }}
+                        />
+                        <span className="truncate">{ev.title}</span>
+                      </div>
+                    );
+                  })}
+
+                  {dayEvents.length > 2 && (
+                    <span className="text-[8px] font-bold text-ritmo-muted sm:hidden px-0.5">
+                      +{dayEvents.length - 2} más
+                    </span>
+                  )}
+                </div>
+              ) : (
+                /* Compact Strip Dots */
+                <div className="flex items-center justify-center gap-1 mt-auto h-2">
+                  {dayEvents.slice(0, 3).map((ev) => {
+                    const colorScheme = EVENT_COLOR_MAP[ev.color] || EVENT_COLOR_MAP.orange;
+                    return (
+                      <span
+                        key={ev.id}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: colorScheme.accent }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
 
-      {/* Collapse / Expand Handle Bar */}
-      <div className="flex justify-center mt-1">
+      {/* Bottom Bar: Toggle Button + Scroll Down Cue */}
+      <div className="flex items-center justify-between px-4 py-2 bg-ritmo-soft/50 border-t border-ritmo-line/60">
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          aria-label={isExpanded ? 'Comprimir a vista semanal' : 'Expandir a vista mensual'}
-          className="flex items-center gap-1 py-1 px-3 text-[10px] font-bold text-ritmo-muted hover:text-ritmo-ink rounded-full transition-colors active:scale-95"
+          className="flex items-center gap-1.5 py-1 px-3 text-[11px] font-bold text-ritmo-muted hover:text-ritmo-ink bg-white rounded-full border border-ritmo-line shadow-2xs transition-transform active:scale-95"
         >
           {isExpanded ? (
             <>
-              <span>Semana</span>
-              <ChevronUp className="w-3.5 h-3.5" />
+              <span>Ver tira semanal</span>
+              <ChevronUp className="w-3.5 h-3.5 text-ritmo-purple" />
             </>
           ) : (
             <>
-              <span>Mes completo</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <span>Ver mes completo</span>
+              <ChevronDown className="w-3.5 h-3.5 text-ritmo-purple" />
             </>
           )}
         </button>
+
+        <div className="flex items-center gap-1 text-[11px] font-bold text-ritmo-muted animate-pulse">
+          <span>Desliza abajo para la agenda</span>
+          <ArrowDown className="w-3.5 h-3.5 text-ritmo-purple" />
+        </div>
       </div>
     </div>
   );

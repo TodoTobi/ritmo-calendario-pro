@@ -43,7 +43,7 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
   }, [events, selectedDateStr]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-6 pb-28">
+    <div className="w-full px-4 py-5 space-y-6 pb-36">
       {groupedEvents.map(([dateStr, dayEvents]) => {
         const { label, dateNum, isCurrentDay } = formatDayHeader(dateStr);
         const isSelected = dateStr === selectedDateStr;

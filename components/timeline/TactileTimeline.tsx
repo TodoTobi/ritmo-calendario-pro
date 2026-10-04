@@ -105,34 +105,41 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
     }
   };
 
+  const rafRef = useRef<number | null>(null);
+
   const handleTouchMove = (e: TouchEvent | MouseEvent) => {
     if (!activeDraggingId) return;
 
     const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
     const deltaY = clientY - dragStartY;
-    setDragOffsetY(deltaY);
 
-    const activeEv = dayEvents.find((x) => x.id === activeDraggingId);
-    if (!activeEv) return;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      setDragOffsetY(deltaY);
 
-    const durationMin =
-      timeStringToMinutes(activeEv.end_time) - timeStringToMinutes(activeEv.start_time);
-    const currentTopPx = initialTopPx + deltaY;
-    const proposedStartMin = pxToMinutes(currentTopPx);
-    const proposedEndMin = proposedStartMin + durationMin;
+      const activeEv = dayEvents.find((x) => x.id === activeDraggingId);
+      if (!activeEv) return;
 
-    const collision = checkTier1Collision(proposedStartMin, proposedEndMin, activeDraggingId);
-    if (collision) {
-      setCollisionWarning(`Colisión con ${collision.title} (Tier 1 Protegido)`);
-      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate(10);
+      const durationMin =
+        timeStringToMinutes(activeEv.end_time) - timeStringToMinutes(activeEv.start_time);
+      const currentTopPx = initialTopPx + deltaY;
+      const proposedStartMin = pxToMinutes(currentTopPx);
+      const proposedEndMin = proposedStartMin + durationMin;
+
+      const collision = checkTier1Collision(proposedStartMin, proposedEndMin, activeDraggingId);
+      if (collision) {
+        setCollisionWarning(`Colisión con ${collision.title} (Tier 1 Protegido)`);
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      } else {
+        setCollisionWarning(null);
       }
-    } else {
-      setCollisionWarning(null);
-    }
+    });
   };
 
   const handleTouchEnd = async () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (!activeDraggingId) return;
 
     const activeEv = dayEvents.find((x) => x.id === activeDraggingId);
@@ -295,7 +302,8 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
 
             const isDragging = activeDraggingId === event.id;
             const normalTopPx = minutesToPx(startMin);
-            const topPx = isDragging ? initialTopPx + dragOffsetY : normalTopPx;
+            const baseTopPx = isDragging ? initialTopPx : normalTopPx;
+            const currentPreviewTopPx = isDragging ? initialTopPx + dragOffsetY : normalTopPx;
             const heightPx = (durationMin / 60) * HOUR_HEIGHT_PX;
 
             const colorScheme = EVENT_COLOR_MAP[event.color] || EVENT_COLOR_MAP.orange;
@@ -307,15 +315,17 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                 onMouseDown={(e) => handleTouchStart(e, event)}
                 onTouchStart={(e) => handleTouchStart(e, event)}
                 style={{
-                  top: `${topPx}px`,
+                  top: `${baseTopPx}px`,
                   height: `${heightPx - 3}px`,
+                  transform: isDragging ? `translate3d(0, ${dragOffsetY}px, 0) scale(1.03)` : 'translate3d(0, 0, 0)',
+                  willChange: isDragging ? 'transform' : 'auto',
                 }}
-                className={`absolute left-14 right-2 rounded-xl p-2.5 transition-all select-none ${
+                className={`absolute left-14 right-2 rounded-xl p-2.5 select-none ${
                   isDragging
-                    ? 'z-30 scale-[1.03] shadow-2xl cursor-grabbing ring-2 ring-ritmo-purple ring-offset-2'
+                    ? 'z-30 shadow-2xl cursor-grabbing ring-2 ring-ritmo-purple ring-offset-2 transition-none'
                     : isTier1
-                    ? 'z-10 shadow-sm cursor-not-allowed opacity-95'
-                    : 'z-20 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md'
+                    ? 'z-10 shadow-sm cursor-not-allowed opacity-95 transition-transform duration-200'
+                    : 'z-20 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-transform duration-200'
                 } ${colorScheme.bg} border-l-4 ${colorScheme.text} border-t border-r border-b border-ritmo-line/40`}
               >
                 <div className="flex items-start justify-between gap-1.5 h-full">
@@ -324,8 +334,8 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                       <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-ritmo-muted">
                         <span>
                           {isDragging
-                            ? `${minutesToTimeString(pxToMinutes(topPx))} – ${minutesToTimeString(
-                                pxToMinutes(topPx) + durationMin
+                            ? `${minutesToTimeString(pxToMinutes(currentPreviewTopPx))} – ${minutesToTimeString(
+                                pxToMinutes(currentPreviewTopPx) + durationMin
                               )}`
                             : `${event.start_time.slice(0, 5)} – ${event.end_time.slice(0, 5)}`}
                         </span>

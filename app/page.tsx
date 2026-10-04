@@ -271,14 +271,15 @@ export default function RitmoMainPage() {
       />
 
       {/* Main Content Area switched by Active Tab */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-y-auto">
         {activeTab === 'calendar' && (
-          <>
+          <div className="w-full flex flex-col">
             <MonthHeaderCollapsible
               currentDate={currentDate}
               selectedDate={selectedDate}
               events={displayedEvents}
               onSelectDate={handleSelectDate}
+              onEventClick={(ev) => setSelectedEventForModal(ev)}
             />
             <AgendaFeed
               events={displayedEvents}
@@ -289,7 +290,7 @@ export default function RitmoMainPage() {
                 setIsQuickAddOpen(true);
               }}
             />
-          </>
+          </div>
         )}
 
         {activeTab === 'timeline' && (
