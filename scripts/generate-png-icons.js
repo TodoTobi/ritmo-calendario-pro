@@ -3,7 +3,6 @@ const path = require('path');
 const zlib = require('zlib');
 
 function encodePNG(width, height, rgbaBuffer) {
-  // 1. PNG Signature
   const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
   function makeChunk(typeStr, dataBuf) {
@@ -19,30 +18,26 @@ function encodePNG(width, height, rgbaBuffer) {
     return Buffer.concat([lengthBuf, typeBuf, dataBuf, crcBuf]);
   }
 
-  // 2. IHDR Chunk
   const ihdrData = Buffer.alloc(13);
   ihdrData.writeUInt32BE(width, 0);
   ihdrData.writeUInt32BE(height, 4);
-  ihdrData[8] = 8; // bit depth
-  ihdrData[9] = 6; // color type: 6 = RGBA
-  ihdrData[10] = 0; // compression
-  ihdrData[11] = 0; // filter method
-  ihdrData[12] = 0; // interlace method
+  ihdrData[8] = 8;
+  ihdrData[9] = 6; // RGBA
+  ihdrData[10] = 0;
+  ihdrData[11] = 0;
+  ihdrData[12] = 0;
   const ihdrChunk = makeChunk('IHDR', ihdrData);
 
-  // 3. IDAT Chunk (Scanlines with filter byte 0)
   const rowBytes = width * 4;
   const rawScanlines = Buffer.alloc((1 + rowBytes) * height);
   for (let y = 0; y < height; y++) {
     const rawOffset = y * (1 + rowBytes);
-    rawScanlines[rawOffset] = 0; // Filter None
+    rawScanlines[rawOffset] = 0;
     const rgbaOffset = y * rowBytes;
     rgbaBuffer.copy(rawScanlines, rawOffset + 1, rgbaOffset, rgbaOffset + rowBytes);
   }
   const compressedData = zlib.deflateSync(rawScanlines, { level: 9 });
   const idatChunk = makeChunk('IDAT', compressedData);
-
-  // 4. IEND Chunk
   const iendChunk = makeChunk('IEND', Buffer.alloc(0));
 
   return Buffer.concat([signature, ihdrChunk, idatChunk, iendChunk]);
@@ -50,6 +45,14 @@ function encodePNG(width, height, rgbaBuffer) {
 
 function renderRitmoIcon(size) {
   const buf = Buffer.alloc(size * size * 4);
+
+  // 1. Initialize Full-Bleed Solid White Canvas (#ffffff)
+  for (let i = 0; i < size * size * 4; i += 4) {
+    buf[i] = 255;
+    buf[i + 1] = 255;
+    buf[i + 2] = 255;
+    buf[i + 3] = 255;
+  }
 
   function setPixel(x, y, r, g, b, a) {
     if (x < 0 || x >= size || y < 0 || y >= size) return;
@@ -65,7 +68,6 @@ function renderRitmoIcon(size) {
     buf[idx + 3] = Math.round(outA * 255);
   }
 
-  // Rounded rectangle signed distance
   function roundedRectDist(x, y, rx, ry, rw, rh, rad) {
     const cx = Math.max(rx + rad, Math.min(x, rx + rw - rad));
     const cy = Math.max(ry + rad, Math.min(y, ry + rh - rad));
@@ -74,64 +76,64 @@ function renderRitmoIcon(size) {
     return Math.sqrt(dx * dx + dy * dy) - rad;
   }
 
-  const cornerRadius = size * (112 / 512);
+  // 2. Harmonious, Symmetrically Centered Calendar Card Dimensions
+  const cardW = size * (316 / 512); // 316 px
+  const cardH = size * (276 / 512); // 276 px
+  const cardX = (size - cardW) / 2; // 98 px
+  const cardY = size * (126 / 512); // 126 px
+  const cardRad = size * (36 / 512); // 36 px
 
-  // 1. Draw PURE WHITE Base Squircle Canvas
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const d = roundedRectDist(x, y, 0, 0, size, size, cornerRadius);
-      if (d <= 0.5) {
-        const factor = Math.max(0, Math.min(1, 0.5 - d));
-        // Pure crisp white canvas with subtle border near edge
-        if (d > -2.0) {
-          // Subtle border #e6e8f0
-          setPixel(x, y, 230, 232, 240, Math.round(255 * factor));
-        } else {
-          setPixel(x, y, 255, 255, 255, Math.round(255 * factor));
-        }
+  // 3. Smooth Drop Shadow (drawn BEFORE the card so card covers interior, NO white gap)
+  const shadowOffsetY = size * (12 / 512);
+  const shadowSpread = size * (28 / 512);
+  const sigma = size * (12 / 512);
+
+  const shadowMinY = Math.max(0, Math.floor(cardY));
+  const shadowMaxY = Math.min(size, Math.ceil(cardY + cardH + shadowOffsetY + shadowSpread));
+  const shadowMinX = Math.max(0, Math.floor(cardX - shadowSpread));
+  const shadowMaxX = Math.min(size, Math.ceil(cardX + cardW + shadowSpread));
+
+  for (let y = shadowMinY; y < shadowMaxY; y++) {
+    for (let x = shadowMinX; x < shadowMaxX; x++) {
+      const d = roundedRectDist(x, y - shadowOffsetY, cardX, cardY, cardW, cardH, cardRad);
+      if (d <= shadowSpread) {
+        const dist = Math.max(0, d);
+        // Gaussian blur falloff
+        const intensity = Math.exp(-(dist * dist) / (2 * sigma * sigma)) * 0.18;
+        // Soft deep navy shadow
+        setPixel(x, y, 20, 16, 52, Math.round(255 * intensity));
       }
     }
   }
 
-  // 2. Calendar Card Coordinates
-  const cardX = size * (84 / 512);
-  const cardY = size * (100 / 512);
-  const cardW = size * (344 / 512);
-  const cardH = size * (320 / 512);
-  const cardRad = size * (38 / 512);
+  // 4. Elevated Calendar Card Body (Drawn ON TOP of shadow, flush and crisp)
+  const cardMinY = Math.floor(cardY);
+  const cardMaxY = Math.ceil(cardY + cardH);
+  const cardMinX = Math.floor(cardX);
+  const cardMaxX = Math.ceil(cardX + cardW);
 
-  // Soft Drop Shadow on White Canvas
-  const shadowSpread = size * (22 / 512);
-  for (let y = Math.floor(cardY - 4); y < Math.ceil(cardY + cardH + shadowSpread + 8); y++) {
-    for (let x = Math.floor(cardX - shadowSpread); x < Math.ceil(cardX + cardW + shadowSpread); x++) {
-      const d = roundedRectDist(x, y - (size * (12 / 512)), cardX, cardY, cardW, cardH, cardRad);
-      if (d > 0 && d <= shadowSpread) {
-        const intensity = Math.pow(1 - d / shadowSpread, 2) * 0.16;
-        // Shadow with a touch of Ritmo purple: #1e1644
-        setPixel(x, y, 30, 22, 68, Math.round(255 * intensity));
-      }
-    }
-  }
-
-  // 3. Elevated Calendar Card Body (Sleek Deep Ink Container that makes colors shine)
-  for (let y = Math.floor(cardY); y < Math.ceil(cardY + cardH); y++) {
-    for (let x = Math.floor(cardX); x < Math.ceil(cardX + cardW); x++) {
+  for (let y = cardMinY; y < cardMaxY; y++) {
+    for (let x = cardMinX; x < cardMaxX; x++) {
       const d = roundedRectDist(x, y, cardX, cardY, cardW, cardH, cardRad);
       if (d <= 0.5) {
         const alpha = Math.max(0, Math.min(1, 0.5 - d));
-        const isHeader = y < cardY + size * (72 / 512);
-        if (isHeader) {
-          // Header banner accent #2c255c
-          setPixel(x, y, 44, 37, 92, Math.round(255 * alpha));
+        const isHeader = y < cardY + size * (68 / 512);
+
+        if (d > -1.2) {
+          // Subtle crisp card rim border
+          setPixel(x, y, 70, 65, 120, Math.round(200 * alpha));
+        } else if (isHeader) {
+          // Header banner accent #2c255e
+          setPixel(x, y, 44, 37, 94, Math.round(255 * alpha));
         } else {
-          // Card body #121028
-          setPixel(x, y, 18, 16, 40, Math.round(255 * alpha));
+          // Deep ink card interior #13112a
+          setPixel(x, y, 19, 17, 42, Math.round(255 * alpha));
         }
       }
     }
   }
 
-  // Helper for pills / rounded rects
+  // Helper for rounded pills
   function drawPill(px, py, pw, ph, pr, r, g, b, alpha = 1) {
     for (let y = Math.floor(py); y < Math.ceil(py + ph); y++) {
       for (let x = Math.floor(px); x < Math.ceil(px + pw); x++) {
@@ -161,32 +163,36 @@ function renderRitmoIcon(size) {
     }
   }
 
-  // 4. Binder Rings at top: Ritmo Purple (#6558f5) & Mint Green (#46a978)
-  drawPill(size * (154 / 512), size * (82 / 512), size * (22 / 512), size * (38 / 512), size * (11 / 512), 101, 88, 245);
-  drawPill(size * (336 / 512), size * (82 / 512), size * (22 / 512), size * (38 / 512), size * (11 / 512), 70, 169, 120);
+  // 5. Top Binder Rings (Ritmo Purple #6558f5 & Mint Green #46a978)
+  drawPill(cardX + size * (64 / 512), cardY - size * (18 / 512), size * (22 / 512), size * (38 / 512), size * (11 / 512), 101, 88, 245);
+  drawPill(cardX + cardW - size * (86 / 512), cardY - size * (18 / 512), size * (22 / 512), size * (38 / 512), size * (11 / 512), 70, 169, 120);
 
-  // 5. Semantic Color Dots (Red, Orange, Yellow, Green, Blue)
-  drawCircle(size * (196 / 512), size * (136 / 512), size * (6.5 / 512), 255, 93, 99);   // #ff5d63 Red
-  drawCircle(size * (226 / 512), size * (136 / 512), size * (6.5 / 512), 242, 166, 65);  // #f2a641 Orange
-  drawCircle(size * (256 / 512), size * (136 / 512), size * (6.5 / 512), 231, 201, 74);  // #e7c94a Yellow
-  drawCircle(size * (286 / 512), size * (136 / 512), size * (6.5 / 512), 70, 169, 120);  // #46a978 Green
-  drawCircle(size * (316 / 512), size * (136 / 512), size * (6.5 / 512), 76, 154, 245);  // #4c9af5 Blue
+  // 6. Semantic Color Dots (Ritmo Palette: Red, Orange, Yellow, Green, Blue)
+  const dotsCenterY = cardY + size * (34 / 512);
+  const dotsStartX = size * (200 / 512);
+  const dotSpacing = size * (28 / 512);
 
-  // 6. Subtle Matrix of Activity Chips
-  drawPill(size * (116 / 512), size * (196 / 512), size * (76 / 512), size * (16 / 512), size * (8 / 512), 255, 93, 99, 0.22);
-  drawPill(size * (204 / 512), size * (196 / 512), size * (104 / 512), size * (16 / 512), size * (8 / 512), 101, 88, 245, 0.22);
-  drawPill(size * (320 / 512), size * (196 / 512), size * (76 / 512), size * (16 / 512), size * (8 / 512), 70, 169, 120, 0.22);
+  drawCircle(dotsStartX, dotsCenterY, size * (6 / 512), 255, 93, 99);                       // #ff5d63 Red
+  drawCircle(dotsStartX + dotSpacing, dotsCenterY, size * (6 / 512), 242, 166, 65);        // #f2a641 Orange
+  drawCircle(dotsStartX + dotSpacing * 2, dotsCenterY, size * (6 / 512), 231, 201, 74);    // #e7c94a Yellow
+  drawCircle(dotsStartX + dotSpacing * 3, dotsCenterY, size * (6 / 512), 70, 169, 120);    // #46a978 Green
+  drawCircle(dotsStartX + dotSpacing * 4, dotsCenterY, size * (6 / 512), 76, 154, 245);    // #4c9af5 Blue
 
-  // 7. Dynamic Rhythm Pulse Wave Overlay
+  // 7. Subtle Background Activity Matrix
+  drawPill(cardX + size * (28 / 512), cardY + size * (86 / 512), size * (70 / 512), size * (14 / 512), size * (7 / 512), 255, 93, 99, 0.22);
+  drawPill(cardX + size * (108 / 512), cardY + size * (86 / 512), size * (96 / 512), size * (14 / 512), size * (7 / 512), 101, 88, 245, 0.22);
+  drawPill(cardX + size * (214 / 512), cardY + size * (86 / 512), size * (74 / 512), size * (14 / 512), size * (7 / 512), 70, 169, 120, 0.22);
+
+  // 8. Dynamic Rhythm Pulse Wave Overlay
   const points = [
-    [size * (106 / 512), size * (294 / 512)],
-    [size * (178 / 512), size * (294 / 512)],
-    [size * (204 / 512), size * (256 / 512)],
-    [size * (228 / 512), size * (344 / 512)],
-    [size * (264 / 512), size * (200 / 512)],
-    [size * (298 / 512), size * (356 / 512)],
-    [size * (324 / 512), size * (294 / 512)],
-    [size * (406 / 512), size * (294 / 512)],
+    [cardX + size * (18 / 512), cardY + size * (176 / 512)],
+    [cardX + size * (86 / 512), cardY + size * (176 / 512)],
+    [cardX + size * (110 / 512), cardY + size * (142 / 512)],
+    [cardX + size * (132 / 512), cardY + size * (224 / 512)],
+    [cardX + size * (166 / 512), cardY + size * (92 / 512)],
+    [cardX + size * (198 / 512), cardY + size * (236 / 512)],
+    [cardX + size * (222 / 512), cardY + size * (176 / 512)],
+    [cardX + size * (298 / 512), cardY + size * (176 / 512)],
   ];
 
   function distToSegment(px, py, x1, y1, x2, y2) {
@@ -199,11 +205,11 @@ function renderRitmoIcon(size) {
     return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
   }
 
-  const lineWidth = size * (9.5 / 512);
+  const lineWidth = size * (9 / 512);
   const glowWidth = size * (24 / 512);
 
-  for (let y = Math.floor(cardY); y < Math.ceil(cardY + cardH); y++) {
-    for (let x = Math.floor(cardX); x < Math.ceil(cardX + cardW); x++) {
+  for (let y = cardMinY; y < cardMaxY; y++) {
+    for (let x = cardMinX; x < cardMaxX; x++) {
       let minDist = 999999;
       let segProgress = 0;
 
@@ -244,9 +250,11 @@ function renderRitmoIcon(size) {
     }
   }
 
-  // 8. Luminous Apex Pulse Highlight on Peak
-  drawCircle(size * (264 / 512), size * (200 / 512), size * (9 / 512), 255, 255, 255, 1);
-  drawCircle(size * (264 / 512), size * (200 / 512), size * (5 / 512), 70, 169, 120, 1);
+  // 9. Luminous Apex Pulse Highlight on Peak
+  const apexX = cardX + size * (166 / 512);
+  const apexY = cardY + size * (92 / 512);
+  drawCircle(apexX, apexY, size * (8.5 / 512), 255, 255, 255, 1);
+  drawCircle(apexX, apexY, size * (4.5 / 512), 70, 169, 120, 1);
 
   return encodePNG(size, size, buf);
 }
@@ -260,4 +268,4 @@ fs.writeFileSync(path.join(__dirname, '../public/icons/icon-512.png'), icon512);
 fs.writeFileSync(path.join(__dirname, '../public/icon-192.png'), icon192);
 fs.writeFileSync(path.join(__dirname, '../public/icon-512.png'), icon512);
 
-console.log('PNG Icons successfully generated with white canvas background!');
+console.log('PNG Icons successfully generated with zero white gap and flush shadow!');
