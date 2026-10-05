@@ -2,7 +2,7 @@ import { format, parseISO, differenceInHours } from 'date-fns';
 import { getSupabaseServerClient } from '../supabase/server';
 import { sendTelegramMessage } from '../telegram/bot';
 import { AlertCadence, CalendarEvent } from '../../types/database.types';
-import { timeStringToMinutes } from '../date-utils';
+import { timeStringToMinutes, formatInArgentina } from '../date-utils';
 
 function escapeHtml(str: string): string {
   return str
@@ -394,7 +394,7 @@ export async function dispatchPendingAlerts(referenceDate?: Date): Promise<Dispa
       }
 
       if (recipientChatId) {
-        const alertMsg = `🚨🚨 <b>¡ALERTA DE ENTREGA DE CLASSROOM! [${matchingCadence.label}]</b> 🚨🚨\n\n📚 <b>${escapeHtml(c.course_name)}</b>\n📝 <b>${escapeHtml(c.title)}</b>\n⏰ Vence: <b>${format(dueDate, 'dd/MM HH:mm')} hs</b>\n⏳ Faltan aprox.: <b>${Math.max(1, Math.round(diffHours))} horas</b>\n${c.alternate_link ? `🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n\n` : '\n'}<i>¡No te cuelgues! Asegurate de tenerlo listo y entregado.</i>`;
+        const alertMsg = `🚨🚨 <b>¡ALERTA DE ENTREGA DE CLASSROOM! [${matchingCadence.label}]</b> 🚨🚨\n\n📚 <b>${escapeHtml(c.course_name)}</b>\n📝 <b>${escapeHtml(c.title)}</b>\n⏰ Vence: <b>${formatInArgentina(dueDate, 'datetime')} hs</b>\n⏳ Faltan aprox.: <b>${Math.max(1, Math.round(diffHours))} horas</b>\n${c.alternate_link ? `🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n\n` : '\n'}<i>¡No te cuelgues! Asegurate de tenerlo listo y entregado.</i>`;
 
         await sendTelegramMessage(recipientChatId, alertMsg);
       }

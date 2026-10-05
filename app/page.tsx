@@ -19,6 +19,9 @@ import {
   format,
   timeStringToMinutes,
   minutesToTimeString,
+  getArgentinaDateString,
+  getArgentinaTimeString,
+  formatInArgentina,
 } from '@/lib/date-utils';
 import {
   Settings,
@@ -57,6 +60,7 @@ export default function RitmoMainPage() {
 
   // Google Classroom sync state
   const [classroomCount, setClassroomCount] = useState<number>(0);
+  const [classroomNoDueTasks, setClassroomNoDueTasks] = useState<any[]>([]);
   const [isSyncingClassroom, setIsSyncingClassroom] = useState<boolean>(false);
   const [classroomFeedback, setClassroomFeedback] = useState<string | null>(null);
 
@@ -140,16 +144,17 @@ export default function RitmoMainPage() {
         if (!clErr && dbClassroom && dbClassroom.length > 0) {
           setClassroomCount(dbClassroom.length);
 
+          // 1. Process tasks with due_date, converting accurately to America/Argentina/Buenos_Aires (GMT-3)
           const classroomEvents: CalendarEvent[] = (dbClassroom as any[])
             .filter((item) => Boolean(item.due_date))
             .map((item) => {
               const due = new Date(item.due_date);
-              const eventDate = format(due, 'yyyy-MM-dd');
-              const startTime = format(due, 'HH:mm:ss');
-              const timeFormatted = format(due, 'HH:mm');
+              const eventDate = getArgentinaDateString(due); // "2026-10-05" in BA
+              const timeFormatted = getArgentinaTimeString(due); // "07:59" in BA
+              const startTime = `${timeFormatted}:00`;
               const startMin = timeStringToMinutes(timeFormatted);
               const endMin = Math.min(23 * 60 + 59, startMin + 60);
-              const endTime = minutesToTimeString(endMin) + ':00';
+              const endTime = `${minutesToTimeString(endMin)}:00`;
 
               return {
                 id: `classroom-${item.id}`,
@@ -170,6 +175,19 @@ export default function RitmoMainPage() {
                 updated_at: item.last_synced_at || new Date().toISOString(),
               };
             });
+
+          // 2. Process tasks WITHOUT due_date from active 2026 courses
+          const noDueList = (dbClassroom as any[]).filter((item) => {
+            if (item.due_date) return false;
+            const c = (item.course_name || '').toLowerCase();
+            return (
+              c.includes('2026') ||
+              c.includes('seguridad') ||
+              c.includes('régimen') ||
+              c.includes('educación física')
+            );
+          });
+          setClassroomNoDueTasks(noDueList);
 
           setEvents((prev) => {
             const existingCoursework = new Set(
@@ -473,6 +491,7 @@ export default function RitmoMainPage() {
               <AgendaFeed
                 events={displayedEvents}
                 selectedDateStr={selectedDateStr}
+                classroomNoDueTasks={classroomNoDueTasks}
                 onEventClick={(event: CalendarEvent) => setSelectedEventForModal(event)}
                 onAddEventForDate={(dateStr: string) => {
                   setSelectedDate(new Date(`${dateStr}T12:00:00`));

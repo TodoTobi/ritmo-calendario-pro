@@ -99,6 +99,8 @@ export function estimateAssignmentDifficulty(title: string, description?: string
 
 /**
  * Normalizes Classroom dueDate and dueTime structures into an ISO 8601 string.
+ * Google Classroom API provides dueTime in UTC.
+ * When dueTime is omitted, Classroom assumes 23:59:59 in local teacher time (Argentina GMT-3 = 02:59 UTC next day).
  */
 export function parseClassroomDueDate(
   dueDate?: { year?: number; month?: number; day?: number },
@@ -109,12 +111,19 @@ export function parseClassroomDueDate(
   }
 
   const y = dueDate.year;
-  const m = String(dueDate.month).padStart(2, '0');
-  const d = String(dueDate.day).padStart(2, '0');
-  const h = String(dueTime?.hours ?? 23).padStart(2, '0');
-  const min = String(dueTime?.minutes ?? 59).padStart(2, '0');
+  const m = dueDate.month;
+  const d = dueDate.day;
 
-  return new Date(`${y}-${m}-${d}T${h}:${min}:00.000Z`).toISOString();
+  // If dueTime is explicitly specified by Classroom API, it is already UTC
+  if (dueTime?.hours !== undefined && dueTime?.minutes !== undefined) {
+    const h = String(dueTime.hours).padStart(2, '0');
+    const min = String(dueTime.minutes).padStart(2, '0');
+    return new Date(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${h}:${min}:00.000Z`).toISOString();
+  }
+
+  // If dueTime is omitted by teacher, Classroom default is 23:59:00 in Argentina (UTC-3), which corresponds to 02:59:00 UTC next day
+  const dateObj = new Date(Date.UTC(y, m - 1, d, 23 + 3, 59, 0));
+  return dateObj.toISOString();
 }
 
 /**

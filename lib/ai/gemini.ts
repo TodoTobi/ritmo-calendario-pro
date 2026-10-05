@@ -4,9 +4,9 @@ const apiKey = process.env.GEMINI_API_KEY || '';
 
 export const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
-// Use gemini-flash-latest with fallback candidates
-export const GEMINI_MODEL = 'gemini-flash-latest';
-export const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+// Use gemini-2.0-flash with official production fallback candidates
+export const GEMINI_MODEL = 'gemini-2.0-flash';
+export const FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
 
 export const SYSTEM_PROMPT = `
 Sos TobIAs, el asistente inteligente y motor de IA de Ritmo (calendario, tareas y enfoque personal para un estudiante de secundaria técnica y aspirante a ingeniería en la UTN, en Buenos Aires GMT-3).

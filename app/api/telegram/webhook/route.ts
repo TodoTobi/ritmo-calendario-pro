@@ -10,7 +10,13 @@ import {
 } from '@/lib/telegram/bot';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { syncUtnNotesToDrive } from '@/lib/drive/sync';
-import { timeStringToMinutes, minutesToTimeString } from '@/lib/date-utils';
+import {
+  timeStringToMinutes,
+  minutesToTimeString,
+  formatInArgentina,
+  getArgentinaDateString,
+  getArgentinaTimeString,
+} from '@/lib/date-utils';
 import { createProblemResponse } from '@/lib/rfc7807';
 
 function escapeHtml(str: string): string {
@@ -27,13 +33,14 @@ function escapeHtml(str: string): string {
 async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
   try {
     const now = new Date();
-    const todayStr = format(now, 'yyyy-MM-dd');
+    const todayStr = getArgentinaDateString(now);
     const limitDate = new Date(now.getTime() + 36 * 3600 * 1000);
 
     // 1. Query classroom_sync for pending deliveries
     const { data: upcomingClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
+      .not('due_date', 'is', null)
       .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
       .lte('due_date', limitDate.toISOString())
       .order('due_date', { ascending: true })
@@ -62,13 +69,13 @@ async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
     if (hasClassroom) {
       for (const c of upcomingClassroom) {
         const dObj = c.due_date ? new Date(c.due_date) : null;
-        const dStr = dObj ? format(dObj, 'dd/MM HH:mm') : 'Sin hora fija';
-        const isTomorrow =
-          dObj && format(dObj, 'yyyy-MM-dd') === format(addDays(now, 1), 'yyyy-MM-dd');
-        const isToday = dObj && format(dObj, 'yyyy-MM-dd') === todayStr;
+        const dStr = dObj ? `${formatInArgentina(dObj, 'datetime')} hs` : 'Sin hora fija';
+        const dateStrBA = dObj ? getArgentinaDateString(dObj) : '';
+        const isTomorrow = dateStrBA === getArgentinaDateString(addDays(now, 1));
+        const isToday = dateStrBA === todayStr;
         const tag = isToday ? '🔴 <b>HOY</b>' : isTomorrow ? '⚠️ <b>MAÑANA</b>' : '🗓';
 
-        banner += `${tag} <b>${dStr} hs</b> — <i>${escapeHtml(c.course_name)}</i>\n`;
+        banner += `${tag} <b>${dStr}</b> — <i>${escapeHtml(c.course_name)}</i>\n`;
         banner += `   📝 <b>${escapeHtml(c.title)}</b>\n`;
         if (c.alternate_link) {
           banner += `   🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n`;
@@ -115,38 +122,64 @@ async function handleChatbotQuery(
     lower.includes('tp') ||
     lower.includes('deberes')
   ) {
-    const { data: classroomItems } = await supabase
+    // 1. Query upcoming items with due_date
+    const { data: upcomingClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
+      .not('due_date', 'is', null)
       .gte('due_date', new Date(now.getTime() - 24 * 3600 * 1000).toISOString())
       .order('due_date', { ascending: true })
-      .limit(8);
+      .limit(6);
 
-    if (!classroomItems || classroomItems.length === 0) {
+    // 2. Query active 2026 items without due_date
+    const { data: noDueClassroom } = await supabase
+      .from('classroom_sync')
+      .select('*')
+      .is('due_date', null)
+      .or('course_name.ilike.%2026%,course_name.ilike.%seguridad%,course_name.ilike.%régimen%,course_name.ilike.%educación física%')
+      .limit(6);
+
+    const hasUpcoming = upcomingClassroom && upcomingClassroom.length > 0;
+    const hasNoDue = noDueClassroom && noDueClassroom.length > 0;
+
+    if (!hasUpcoming && !hasNoDue) {
       const msg =
-        '🎉 <b>No tenés entregas pendientes ni tareas urgentes de Classroom</b> registradas para los próximos días en Ritmo.';
+        '🎉 <b>No tenés entregas pendientes ni tareas de Classroom</b> registradas para tus cursos activos en Ritmo.';
       await sendTelegramMessage(chatId, msg);
       return msg;
     }
 
     let response = '📚 <b>Tareas y Entregas de Google Classroom:</b>\n\n';
 
-    for (const item of classroomItems) {
-      const dueDateObj = item.due_date ? new Date(item.due_date) : null;
-      const dueStr = dueDateObj ? format(dueDateObj, 'dd/MM HH:mm') : 'Sin fecha';
-      const isTomorrow =
-        dueDateObj &&
-        format(dueDateObj, 'yyyy-MM-dd') === format(addDays(now, 1), 'yyyy-MM-dd');
-      const isToday = dueDateObj && format(dueDateObj, 'yyyy-MM-dd') === today;
+    if (hasUpcoming) {
+      response += '🗓 <b>Entregas con fecha límite:</b>\n';
+      for (const item of upcomingClassroom) {
+        const dueDateObj = item.due_date ? new Date(item.due_date) : null;
+        const dueStr = dueDateObj ? `${formatInArgentina(dueDateObj, 'datetime')} hs` : 'Sin fecha';
+        const dateStrBA = dueDateObj ? getArgentinaDateString(dueDateObj) : '';
+        const isTomorrow = dateStrBA === getArgentinaDateString(addDays(now, 1));
+        const isToday = dateStrBA === today;
 
-      const tag = isToday ? '🔴 <b>HOY</b>' : isTomorrow ? '⚠️ <b>MAÑANA</b>' : '🗓';
+        const tag = isToday ? '🔴 <b>HOY</b>' : isTomorrow ? '⚠️ <b>MAÑANA</b>' : '📌';
 
-      response += `${tag} <b>${dueStr} hs</b> — <i>${escapeHtml(item.course_name)}</i>\n`;
-      response += `   📝 <b>${escapeHtml(item.title)}</b>\n`;
-      if (item.alternate_link) {
-        response += `   🔗 <a href="${item.alternate_link}">Abrir en Google Classroom</a>\n`;
+        response += `${tag} <b>${dueStr}</b> — <i>${escapeHtml(item.course_name)}</i>\n`;
+        response += `   📝 <b>${escapeHtml(item.title)}</b>\n`;
+        if (item.alternate_link) {
+          response += `   🔗 <a href="${item.alternate_link}">Abrir en Google Classroom</a>\n`;
+        }
+        response += '\n';
       }
-      response += '\n';
+    }
+
+    if (hasNoDue) {
+      response += '📋 <b>Tareas activas sin fecha límite (Cursos 2026):</b>\n';
+      for (const item of noDueClassroom) {
+        response += `• <b>[${escapeHtml(item.course_name)}]</b> <i>${escapeHtml(item.title)}</i>\n`;
+        if (item.alternate_link) {
+          response += `   🔗 <a href="${item.alternate_link}">Abrir</a>\n`;
+        }
+      }
+      response += '\n<i>(Podés ver las tareas completas en la app web de Ritmo en tu agenda y notas).</i>\n\n';
     }
 
     response += '<i>¿Querés que te reserve un bloque hoy para avanzar con estas tareas?</i>';
@@ -169,7 +202,7 @@ async function handleChatbotQuery(
       lower.includes('mañana') ||
       lower.includes('manana');
 
-    const targetDate = isTomorrow ? format(addDays(now, 1), 'yyyy-MM-dd') : today;
+    const targetDate = isTomorrow ? getArgentinaDateString(addDays(now, 1)) : today;
     const dateLabel = isTomorrow ? `Mañana (${targetDate})` : `Hoy (${targetDate})`;
 
     const { data: dayEvents } = await supabase
@@ -203,8 +236,8 @@ async function handleChatbotQuery(
     if (dayClassroom && dayClassroom.length > 0) {
       response += '⚠️ <b>Entregas de Classroom para ese día:</b>\n';
       for (const item of dayClassroom) {
-        const timeStr = item.due_date ? format(new Date(item.due_date), 'HH:mm') : '';
-        response += `• <b>${timeStr}</b>: ${escapeHtml(item.course_name)} — <i>${escapeHtml(
+        const timeStr = item.due_date ? formatInArgentina(item.due_date, 'time') : '';
+        response += `• <b>${timeStr} hs</b>: ${escapeHtml(item.course_name)} — <i>${escapeHtml(
           item.title
         )}</i>\n`;
       }
@@ -558,8 +591,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (text === '/hoy') {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+      const now = new Date();
+      const today = getArgentinaDateString(now);
+      const lookahead = new Date(now.getTime() + 48 * 3600 * 1000).toISOString();
 
       const { data: todayEvents } = await supabase
         .from('events')
@@ -570,9 +604,18 @@ export async function POST(req: NextRequest) {
       const { data: upcomingTasks } = await supabase
         .from('classroom_sync')
         .select('*')
-        .gte('due_date', `${today}T00:00:00.000Z`)
-        .lte('due_date', `${tomorrow}T23:59:59.999Z`)
+        .not('due_date', 'is', null)
+        .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
+        .lte('due_date', lookahead)
         .order('due_date', { ascending: true });
+
+      const { data: noDueTasks } = await supabase
+        .from('classroom_sync')
+        .select('*')
+        .is('due_date', null)
+        .or('course_name.ilike.%2026%,course_name.ilike.%seguridad%,course_name.ilike.%régimen%,course_name.ilike.%educación física%')
+        .order('title', { ascending: true })
+        .limit(6);
 
       let scheduleText = '';
       if (urgentNotice) {
@@ -581,7 +624,7 @@ export async function POST(req: NextRequest) {
 
       scheduleText += `📅 <b>Agenda de Hoy (${today}):</b>\n\n`;
       if (!todayEvents || todayEvents.length === 0) {
-        scheduleText += '<i>No tienes compromisos agendados para hoy.</i>\n\n';
+        scheduleText += '<i>No tenés compromisos agendados para hoy.</i>\n\n';
       } else {
         for (const ev of todayEvents) {
           const tierBadge =
@@ -597,10 +640,18 @@ export async function POST(req: NextRequest) {
       if (upcomingTasks && upcomingTasks.length > 0) {
         scheduleText += '⚠️ <b>Entregas próximas de Classroom:</b>\n';
         for (const t of upcomingTasks) {
-          const dStr = t.due_date ? format(new Date(t.due_date), 'dd/MM HH:mm') : '';
+          const dStr = t.due_date ? `${formatInArgentina(t.due_date, 'datetime')} hs` : '';
           scheduleText += `• <b>${dStr}</b>: ${escapeHtml(t.course_name)} — <i>${escapeHtml(
             t.title
           )}</i>\n`;
+        }
+        scheduleText += '\n';
+      }
+
+      if (noDueTasks && noDueTasks.length > 0) {
+        scheduleText += '📋 <b>Tareas activas 2026 (sin fecha límite fijada):</b>\n';
+        for (const t of noDueTasks) {
+          scheduleText += `• ${escapeHtml(t.course_name)}: <i>${escapeHtml(t.title)}</i>\n`;
         }
       }
 
