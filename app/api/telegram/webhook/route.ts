@@ -27,16 +27,31 @@ function escapeHtml(str: string): string {
 }
 
 /**
- * Detects upcoming deadlines within next 36 hours from Classroom and Tasks
+ * Detects upcoming calendar events and deadlines within next 36 hours from Classroom and Tasks
  * and constructs an unmissable, insistent alert banner.
  */
 async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
   try {
     const now = new Date();
     const todayStr = getArgentinaDateString(now);
+    const currentTimeStr = getArgentinaTimeString(now);
+    const currentHHMM = currentTimeStr.slice(0, 5);
     const limitDate = new Date(now.getTime() + 36 * 3600 * 1000);
 
-    // 1. Query classroom_sync for pending deliveries (excluding already turned in or graded)
+    // 1. Query today's upcoming calendar events (start_time >= current time in Argentina)
+    const { data: todayEvents } = await supabase
+      .from('events')
+      .select('*')
+      .eq('event_date', todayStr)
+      .order('start_time', { ascending: true });
+
+    const upcomingEvents = (todayEvents || []).filter((ev: any) => {
+      if (!ev.start_time) return false;
+      const startHHMM = ev.start_time.slice(0, 5);
+      return startHHMM >= currentHHMM;
+    });
+
+    // 2. Query classroom_sync for pending deliveries (excluding already turned in or graded)
     const { data: upcomingClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
@@ -46,9 +61,9 @@ async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
       .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
       .lte('due_date', limitDate.toISOString())
       .order('due_date', { ascending: true })
-      .limit(3);
+      .limit(4);
 
-    // 2. Query pending tasks
+    // 3. Query pending tasks
     const { data: upcomingTasks } = await supabase
       .from('tasks')
       .select('*')
@@ -58,17 +73,36 @@ async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
       .order('due_date', { ascending: true })
       .limit(3);
 
+    const hasEvents = upcomingEvents && upcomingEvents.length > 0;
     const hasClassroom = upcomingClassroom && upcomingClassroom.length > 0;
     const hasTasks = upcomingTasks && upcomingTasks.length > 0;
 
-    if (!hasClassroom && !hasTasks) {
+    if (!hasEvents && !hasClassroom && !hasTasks) {
       return null;
     }
 
-    let banner = '🚨🚨 <b>¡ALERTA DE ENTREGA INMINENTE!</b> 🚨🚨\n';
-    banner += '⚠️ <i>¡Ojo, no te cuelgues! Tenés compromisos por vencer muy pronto:</i>\n\n';
+    let banner = '🚨🚨 <b>¡AVISO INTEGRADO: COMPROMISOS Y ENTREGAS INMINENTES!</b> 🚨🚨\n';
+    banner += '⚠️ <i>¡Atención! Tenés actividades y entregas por delante:</i>\n\n';
+
+    if (hasEvents) {
+      banner += '⏰ <b>Eventos de Hoy (a partir de ahora):</b>\n';
+      for (const ev of upcomingEvents) {
+        const tierBadge =
+          ev.tier === 'tier_1'
+            ? '🛡️🔴 Tier 1 (Inamovible)'
+            : ev.tier === 'tier_2'
+            ? '⚡🟡 Tier 2 (Movible)'
+            : '🌱🟢 Tier 3 (Hábito)';
+        banner += `• <b>${ev.start_time.slice(0, 5)} - ${ev.end_time.slice(
+          0,
+          5
+        )} hs</b>: ${escapeHtml(ev.title)} [${tierBadge}]\n`;
+      }
+      banner += '\n';
+    }
 
     if (hasClassroom) {
+      banner += '📚 <b>Entregas Próximas de Google Classroom:</b>\n';
       for (const c of upcomingClassroom) {
         const dObj = c.due_date ? new Date(c.due_date) : null;
         const dStr = dObj ? `${formatInArgentina(dObj, 'datetime')} hs` : 'Sin hora fija';
@@ -87,13 +121,17 @@ async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
     }
 
     if (hasTasks) {
-      for (const t of upcomingTasks) {
-        if (t.classroom_coursework_id) continue;
-        banner += `📌 <b>${escapeHtml(t.title)}</b> (Vence: ${t.due_date || 'Próximamente'})\n`;
+      const filteredTasks = upcomingTasks.filter((t: any) => !t.classroom_coursework_id);
+      if (filteredTasks.length > 0) {
+        banner += '📌 <b>Tareas pendientes:</b>\n';
+        for (const t of filteredTasks) {
+          banner += `• <b>${escapeHtml(t.title)}</b> (Vence: ${t.due_date || 'Próximamente'})\n`;
+        }
+        banner += '\n';
       }
     }
 
-    banner += '<i>¡Asegurate de tenerlo listo y entregado a tiempo!</i>';
+    banner += '<i>¡Mantené el foco y avanzá sin postergar!</i>';
     return banner.trim();
   } catch (err) {
     console.warn('[Webhook] Error building urgent deadline notice:', err);
@@ -111,11 +149,125 @@ async function handleChatbotQuery(
   parsedIntent: ParsedIntent
 ): Promise<string> {
   const supabase = getSupabaseServerClient();
-  const today = format(new Date(), 'yyyy-MM-dd');
   const now = new Date();
-  const lower = userText.toLowerCase();
+  const today = getArgentinaDateString(now);
+  const lower = userText.toLowerCase().trim();
 
-  // 1. CLASSROOM OR TASKS QUERY
+  // 1. Check if user is querying schedule / daily brief ("qué tengo hoy", "qué tengo que hacer", "recordame", "agenda", "tengo algo")
+  const isTomorrow =
+    parsedIntent.target_date_hint === 'tomorrow' ||
+    lower.includes('mañana') ||
+    lower.includes('manana');
+
+  const isDailyBriefQuery =
+    !isTomorrow &&
+    (lower.includes('qué tengo hoy') ||
+      lower.includes('que tengo hoy') ||
+      lower.includes('qué tengo que hacer') ||
+      lower.includes('que tengo que hacer') ||
+      lower.includes('recordame') ||
+      lower.includes('recuérdame') ||
+      lower.includes('recuerdame') ||
+      lower.includes('agenda') ||
+      lower.includes('tengo algo') ||
+      lower.includes('qué tengo') ||
+      lower.includes('que tengo') ||
+      parsedIntent.query_category === 'SCHEDULE' ||
+      parsedIntent.intent === 'QUERY_SCHEDULE');
+
+  if (isDailyBriefQuery) {
+    // 1) Query today's commitments with times and Tiers
+    const { data: dayEvents } = await supabase
+      .from('events')
+      .select('*')
+      .eq('event_date', today)
+      .order('start_time', { ascending: true });
+
+    // 2) Query Classroom pending tasks
+    const { data: upcomingClassroom } = await supabase
+      .from('classroom_sync')
+      .select('*')
+      .not('due_date', 'is', null)
+      .neq('state', 'TURNED_IN')
+      .neq('state', 'RETURNED')
+      .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
+      .lte('due_date', new Date(now.getTime() + 72 * 3600 * 1000).toISOString())
+      .order('due_date', { ascending: true });
+
+    const { data: noDueClassroom } = await supabase
+      .from('classroom_sync')
+      .select('*')
+      .is('due_date', null)
+      .neq('state', 'TURNED_IN')
+      .neq('state', 'RETURNED')
+      .or('course_name.ilike.%2026%,course_name.ilike.%seguridad%,course_name.ilike.%régimen%,course_name.ilike.%educación física%')
+      .order('title', { ascending: true })
+      .limit(3);
+
+    let brief = `📅 <b>Resumen Diario Integrado de Hoy (${today})</b>\n\n`;
+
+    // Section 1: Compromisos del día con horarios y Tiers (devocional, iglesia, inglés, UTN, pasantías, etc.)
+    brief += `📌 <b>1. Compromisos y Clases de Hoy:</b>\n`;
+    if (!dayEvents || dayEvents.length === 0) {
+      brief += `<i>No tenés compromisos específicos registrados para hoy en el calendario.</i>\n`;
+    } else {
+      for (const ev of dayEvents) {
+        const tierBadge =
+          ev.tier === 'tier_1'
+            ? '🛡️ Tier 1 (Inamovible)'
+            : ev.tier === 'tier_2'
+            ? '⚡ Tier 2 (Movible)'
+            : '🌱 Tier 3 (Hábito/Carga)';
+        brief += `• <b>${ev.start_time.slice(0, 5)} - ${ev.end_time.slice(0, 5)} hs</b>: ${escapeHtml(
+          ev.title
+        )} [${tierBadge}]\n`;
+      }
+    }
+    brief += '\n';
+
+    // Section 2: Tareas de Classroom pendientes
+    brief += `📚 <b>2. Tareas de Classroom Pendientes:</b>\n`;
+    const hasClassroomDue = upcomingClassroom && upcomingClassroom.length > 0;
+    const hasClassroomNoDue = noDueClassroom && noDueClassroom.length > 0;
+
+    if (!hasClassroomDue && !hasClassroomNoDue) {
+      brief += `<i>¡Al día! No tenés entregas urgentes de Classroom registradas por ahora.</i>\n`;
+    } else {
+      if (hasClassroomDue) {
+        for (const item of upcomingClassroom) {
+          const dObj = item.due_date ? new Date(item.due_date) : null;
+          const dueStr = dObj ? `${formatInArgentina(dObj, 'datetime')} hs` : 'Sin fecha fija';
+          const isToday = dObj && getArgentinaDateString(dObj) === today;
+          const tag = isToday ? '🔴 <b>HOY</b>' : '⚠️';
+          brief += `• ${tag} <b>${dueStr}</b>: <i>${escapeHtml(item.course_name)}</i> — <b>${escapeHtml(
+            item.title
+          )}</b>\n`;
+          if (item.alternate_link) {
+            brief += `   🔗 <a href="${item.alternate_link}">Abrir tarea en Classroom</a>\n`;
+          }
+        }
+      }
+      if (hasClassroomNoDue) {
+        for (const item of noDueClassroom) {
+          brief += `• 📋 <i>${escapeHtml(item.course_name)}</i>: ${escapeHtml(item.title)}\n`;
+        }
+      }
+    }
+    brief += '\n';
+
+    // Section 3: Hábitos recomendados para hoy (láminas, gym, guitarra)
+    brief += `💪 <b>3. Hábitos Recomendados para Hoy:</b>\n`;
+    brief += `• 📐 <b>Dibujo Técnico (Láminas):</b> Avanzar bloque de láminas pendientes (~2h).\n`;
+    brief += `• 🏋️ <b>Gimnasio / Entrenamiento Físico:</b> Rutina de pesas y movilidad (1-2h).\n`;
+    brief += `• 🎸 <b>Guitarra & Práctica de Inglés:</b> Enfoque de instrumento y fluidez oral (45-60 min).\n\n`;
+
+    brief += `💡 <i>Recordá: Los bloques de Tier 1 son inamovibles; los hábitos de Tier 3 se ajustan si el día se sobrecarga. ¿Querés agendar o registrar algo ahora?</i>`;
+
+    await sendTelegramMessage(chatId, brief);
+    return brief;
+  }
+
+  // 2. CLASSROOM OR TASKS QUERY ONLY
   if (
     parsedIntent.query_category === 'CLASSROOM_OR_TASKS' ||
     lower.includes('classroom') ||
@@ -163,10 +315,10 @@ async function handleChatbotQuery(
         const dueDateObj = item.due_date ? new Date(item.due_date) : null;
         const dueStr = dueDateObj ? `${formatInArgentina(dueDateObj, 'datetime')} hs` : 'Sin fecha';
         const dateStrBA = dueDateObj ? getArgentinaDateString(dueDateObj) : '';
-        const isTomorrow = dateStrBA === getArgentinaDateString(addDays(now, 1));
-        const isToday = dateStrBA === today;
+        const isTargetTomorrow = dateStrBA === getArgentinaDateString(addDays(now, 1));
+        const isTargetToday = dateStrBA === today;
 
-        const tag = isToday ? '🔴 <b>HOY</b>' : isTomorrow ? '⚠️ <b>MAÑANA</b>' : '📌';
+        const tag = isTargetToday ? '🔴 <b>HOY</b>' : isTargetTomorrow ? '⚠️ <b>MAÑANA</b>' : '📌';
 
         response += `${tag} <b>${dueStr}</b> — <i>${escapeHtml(item.course_name)}</i>\n`;
         response += `   📝 <b>${escapeHtml(item.title)}</b>\n`;
@@ -194,22 +346,10 @@ async function handleChatbotQuery(
     return response;
   }
 
-  // 2. SCHEDULE QUERY (Today, Tomorrow, Week)
-  if (
-    parsedIntent.query_category === 'SCHEDULE' ||
-    parsedIntent.intent === 'QUERY_SCHEDULE' ||
-    lower.includes('agenda') ||
-    lower.includes('horario') ||
-    lower.includes('qué tengo') ||
-    lower.includes('que tengo')
-  ) {
-    const isTomorrow =
-      parsedIntent.target_date_hint === 'tomorrow' ||
-      lower.includes('mañana') ||
-      lower.includes('manana');
-
-    const targetDate = isTomorrow ? getArgentinaDateString(addDays(now, 1)) : today;
-    const dateLabel = isTomorrow ? `Mañana (${targetDate})` : `Hoy (${targetDate})`;
+  // 3. SCHEDULE QUERY FOR TOMORROW
+  if (isTomorrow) {
+    const targetDate = getArgentinaDateString(addDays(now, 1));
+    const dateLabel = `Mañana (${targetDate})`;
 
     const { data: dayEvents } = await supabase
       .from('events')
@@ -232,11 +372,11 @@ async function handleChatbotQuery(
     } else {
       for (const ev of dayEvents) {
         const tierBadge =
-          ev.tier === 'tier_1' ? '🛡 T1' : ev.tier === 'tier_2' ? '🔷 T2' : '🟠 T3';
+          ev.tier === 'tier_1' ? '🛡️ Tier 1' : ev.tier === 'tier_2' ? '⚡ Tier 2' : '🌱 Tier 3';
         response += `• <b>${ev.start_time.slice(0, 5)} - ${ev.end_time.slice(
           0,
           5
-        )}</b>: ${escapeHtml(ev.title)} (${tierBadge})\n`;
+        )} hs</b>: ${escapeHtml(ev.title)} [${tierBadge}]\n`;
       }
       response += '\n';
     }
@@ -651,45 +791,72 @@ export async function POST(req: NextRequest) {
         .neq('state', 'RETURNED')
         .or('course_name.ilike.%2026%,course_name.ilike.%seguridad%,course_name.ilike.%régimen%,course_name.ilike.%educación física%')
         .order('title', { ascending: true })
-        .limit(6);
+        .limit(3);
 
       let scheduleText = '';
       if (urgentNotice) {
         scheduleText += `${urgentNotice}\n\n----------------------------------------\n\n`;
       }
 
-      scheduleText += `📅 <b>Agenda de Hoy (${today}):</b>\n\n`;
+      scheduleText += `📅 <b>Resumen Diario Integrado de Hoy (${today})</b>\n\n`;
+
+      // 1. Compromisos del día con horarios y Tiers
+      scheduleText += `📌 <b>1. Compromisos y Clases del Día:</b>\n`;
       if (!todayEvents || todayEvents.length === 0) {
-        scheduleText += '<i>No tenés compromisos agendados para hoy.</i>\n\n';
+        scheduleText += '<i>No tenés compromisos específicos registrados para hoy en el calendario.</i>\n\n';
       } else {
         for (const ev of todayEvents) {
           const tierBadge =
-            ev.tier === 'tier_1' ? '🛡 T1' : ev.tier === 'tier_2' ? '🔷 T2' : '🟠 T3';
+            ev.tier === 'tier_1'
+              ? '🛡️ Tier 1 (Inamovible)'
+              : ev.tier === 'tier_2'
+              ? '⚡ Tier 2 (Movible)'
+              : '🌱 Tier 3 (Hábito/Carga)';
           scheduleText += `• <b>${ev.start_time.slice(0, 5)} - ${ev.end_time.slice(
             0,
             5
-          )}</b>: ${escapeHtml(ev.title)} (${tierBadge})\n`;
+          )} hs</b>: ${escapeHtml(ev.title)} [${tierBadge}]\n`;
         }
         scheduleText += '\n';
       }
 
-      if (upcomingTasks && upcomingTasks.length > 0) {
-        scheduleText += '⚠️ <b>Entregas próximas de Classroom:</b>\n';
-        for (const t of upcomingTasks) {
-          const dStr = t.due_date ? `${formatInArgentina(t.due_date, 'datetime')} hs` : '';
-          scheduleText += `• <b>${dStr}</b>: ${escapeHtml(t.course_name)} — <i>${escapeHtml(
-            t.title
-          )}</i>\n`;
+      // 2. Tareas de Classroom pendientes
+      scheduleText += `📚 <b>2. Tareas de Classroom Pendientes:</b>\n`;
+      const hasClassroomDue = upcomingTasks && upcomingTasks.length > 0;
+      const hasClassroomNoDue = noDueTasks && noDueTasks.length > 0;
+
+      if (!hasClassroomDue && !hasClassroomNoDue) {
+        scheduleText += '<i>¡Al día! No tenés entregas pendientes de Classroom por ahora.</i>\n\n';
+      } else {
+        if (hasClassroomDue) {
+          for (const t of upcomingTasks) {
+            const dObj = t.due_date ? new Date(t.due_date) : null;
+            const dStr = dObj ? `${formatInArgentina(dObj, 'datetime')} hs` : '';
+            const isToday = dObj && getArgentinaDateString(dObj) === today;
+            const tag = isToday ? '🔴 <b>HOY</b>' : '⚠️';
+            scheduleText += `• ${tag} <b>${dStr}</b>: <i>${escapeHtml(t.course_name)}</i> — <b>${escapeHtml(
+              t.title
+            )}</b>\n`;
+            if (t.alternate_link) {
+              scheduleText += `   🔗 <a href="${t.alternate_link}">Abrir tarea</a>\n`;
+            }
+          }
+        }
+        if (hasClassroomNoDue) {
+          for (const t of noDueTasks) {
+            scheduleText += `• 📋 <i>${escapeHtml(t.course_name)}</i>: ${escapeHtml(t.title)}\n`;
+          }
         }
         scheduleText += '\n';
       }
 
-      if (noDueTasks && noDueTasks.length > 0) {
-        scheduleText += '📋 <b>Tareas activas 2026 (sin fecha límite fijada):</b>\n';
-        for (const t of noDueTasks) {
-          scheduleText += `• ${escapeHtml(t.course_name)}: <i>${escapeHtml(t.title)}</i>\n`;
-        }
-      }
+      // 3. Hábitos recomendados para hoy (láminas, gym, guitarra)
+      scheduleText += `💪 <b>3. Hábitos Recomendados para Hoy:</b>\n`;
+      scheduleText += `• 📐 <b>Dibujo Técnico (Láminas):</b> Avanzar bloque de láminas pendientes (~2h).\n`;
+      scheduleText += `• 🏋️ <b>Gimnasio / Entrenamiento Físico:</b> Rutina de pesas y movilidad (1-2h).\n`;
+      scheduleText += `• 🎸 <b>Guitarra & Práctica de Inglés:</b> Enfoque de instrumento y fluidez oral (45-60 min).\n\n`;
+
+      scheduleText += `💡 <i>Recordá: Los bloques de Tier 1 son inamovibles. ¿Querés agendar o registrar algo ahora?</i>`;
 
       await sendTelegramMessage(chatId, scheduleText);
       return NextResponse.json({ ok: true, command: '/hoy' });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { TopHeader } from '@/components/ui/TopHeader';
 import { BottomNav, NavTab } from '@/components/ui/BottomNav';
 import { FAB } from '@/components/ui/FAB';
@@ -69,14 +69,73 @@ export default function RitmoMainPage() {
   const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
   const [driveFeedback, setDriveFeedback] = useState<string | null>(null);
 
+  // Google Classroom tasks collection
+  const [classroomTasks, setClassroomTasks] = useState<any[]>([]);
+
   // Mobile / Browser Push Notification State
   const [notificationPermission, setNotificationPermission] = useState<string>('default');
 
+  // Keep references to latest events and classroom tasks for interval checker
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+  const classroomTasksRef = useRef(classroomTasks);
+  classroomTasksRef.current = classroomTasks;
+
+  // 1. Register '/sw.js' on mount when 'serviceWorker' in navigator
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          console.log('[SW] Service Worker registrado exitosamente:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[SW] Error al registrar Service Worker:', err);
+        });
+    }
+  }, []);
+
+  // Update notification permission state on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
   }, []);
+
+  // 2. Implement triggerDeviceNotification using navigator.serviceWorker.ready.then(reg => reg.showNotification(...)) with fallback to new Notification(...)
+  const triggerDeviceNotification = (title: string, body: string, tag?: string) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    const options: NotificationOptions & { renotify?: boolean } = {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: tag || 'ritmo-alert',
+      renotify: true,
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => {
+          reg.showNotification(title, options);
+        })
+        .catch((err) => {
+          console.warn('[SW] Fallback a new Notification por error en Service Worker:', err);
+          try {
+            new Notification(title, options);
+          } catch (e) {
+            console.error(e);
+          }
+        });
+    } else {
+      try {
+        new Notification(title, options);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   const handleRequestNotificationPermission = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -87,15 +146,114 @@ export default function RitmoMainPage() {
       const perm = await Notification.requestPermission();
       setNotificationPermission(perm);
       if (perm === 'granted') {
-        new Notification('🔔 Ritmo — Notificaciones Activadas', {
-          body: '¡Listo! Recibirás alertas invasivas de entregas urgentes de Classroom y parciales.',
-          icon: '/icons/icon-192.png',
-        });
+        triggerDeviceNotification(
+          '🔔 Ritmo — Notificaciones Activadas',
+          '¡Listo! Recibirás alertas invasivas de entregas urgentes de Classroom y parciales.',
+          'perm-activated'
+        );
       }
     } catch (e) {
       console.warn('Error requesting notification permission:', e);
     }
   };
+
+  const handleTestDeviceNotification = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Las notificaciones del sistema no están soportadas en este navegador.');
+      return;
+    }
+    let perm = Notification.permission;
+    if (perm !== 'granted') {
+      perm = await Notification.requestPermission();
+      setNotificationPermission(perm);
+    }
+    if (perm === 'granted') {
+      triggerDeviceNotification(
+        '🔔 Prueba de Notificación — Ritmo',
+        '¡Excelente! Las notificaciones en este dispositivo están funcionando correctamente.',
+        'test-device-notification'
+      );
+    } else {
+      alert('Permiso de notificaciones no otorgado. Habilitalo en la configuración del navegador.');
+    }
+  };
+
+  // 3. Interval checker (every 60s) for upcoming events (<= 30 min) and Classroom tasks (<= 24 h)
+  useEffect(() => {
+    const checkUpcomingAlerts = () => {
+      if (typeof window === 'undefined' || !('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+
+      const nowMs = Date.now();
+
+      // Check upcoming calendar events starting in <= 30 minutes
+      for (const ev of eventsRef.current) {
+        if (!ev.event_date || !ev.start_time) continue;
+        if (ev.created_from === 'classroom_sync') continue;
+
+        const parts = ev.start_time.trim().split(':');
+        const h = (parts[0] || '0').padStart(2, '0');
+        const m = (parts[1] || '0').padStart(2, '0');
+        const s = (parts[2] || '0').slice(0, 2).padStart(2, '0');
+        const cleanTime = `${h}:${m}:${s}`;
+
+        const eventStart = new Date(`${ev.event_date}T${cleanTime}-03:00`);
+        const diffMs = eventStart.getTime() - nowMs;
+        const diffMinutes = diffMs / (1000 * 60);
+
+        if (diffMinutes >= 0 && diffMinutes <= 30) {
+          const storageKey = `notified_ev_${ev.id}_${ev.event_date}`;
+          try {
+            if (!localStorage.getItem(storageKey)) {
+              localStorage.setItem(storageKey, 'true');
+              const minsLeft = Math.max(1, Math.round(diffMinutes));
+              const tierEmoji = ev.tier === 'tier_1' ? '🔴' : ev.tier === 'tier_2' ? '🟡' : '🟢';
+              triggerDeviceNotification(
+                `⏰ Evento Inminente: ${ev.title}`,
+                `${tierEmoji} Comienza a las ${cleanTime.slice(0, 5)} hs (en aprox. ${minsLeft} min).`,
+                `ev-${ev.id}`
+              );
+            }
+          } catch (e) {
+            console.warn('Storage check error for event:', e);
+          }
+        }
+      }
+
+      // Check upcoming Classroom tasks due in <= 24 hours
+      for (const task of classroomTasksRef.current) {
+        if (!task.due_date) continue;
+        const dueDate = new Date(task.due_date);
+        const diffMs = dueDate.getTime() - nowMs;
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        if (diffHours >= 0 && diffHours <= 24) {
+          const storageKey = `notified_cl_${task.id}`;
+          try {
+            if (!localStorage.getItem(storageKey)) {
+              localStorage.setItem(storageKey, 'true');
+              const hoursLeft = Math.max(1, Math.round(diffHours));
+              triggerDeviceNotification(
+                `🚨 Entrega de Classroom: ${task.title}`,
+                `📚 ${task.course_name || 'Classroom'} — Vence en aprox. ${hoursLeft} hs. ¡No te cuelgues!`,
+                `cl-${task.id}`
+              );
+            }
+          } catch (e) {
+            console.warn('Storage check error for task:', e);
+          }
+        }
+      }
+    };
+
+    const timer = setTimeout(checkUpcomingAlerts, 2000);
+    const interval = setInterval(checkUpcomingAlerts, 60000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Modals state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
@@ -149,6 +307,7 @@ export default function RitmoMainPage() {
           .order('due_date', { ascending: true });
 
         if (!clErr && dbClassroom && dbClassroom.length > 0) {
+          setClassroomTasks(dbClassroom);
           setClassroomCount(dbClassroom.length);
 
           // 1. Process tasks with due_date, converting accurately to America/Argentina/Buenos_Aires (GMT-3)
@@ -324,7 +483,10 @@ export default function RitmoMainPage() {
           .from('classroom_sync')
           .select('*')
           .order('due_date', { ascending: true });
-        if (dbClassroom) setClassroomCount(dbClassroom.length);
+        if (dbClassroom) {
+          setClassroomTasks(dbClassroom);
+          setClassroomCount(dbClassroom.length);
+        }
       } else {
         setClassroomFeedback(data.error || 'No se pudo sincronizar Classroom.');
       }
@@ -732,15 +894,15 @@ export default function RitmoMainPage() {
                 </div>
 
                 {/* Mobile / Device Push Notifications */}
-                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-2.5">
+                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-ritmo-purple" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Notificaciones en el Celular</p>
+                        <p className="font-bold text-ritmo-ink">Notificaciones en este Dispositivo</p>
                         <p className="text-[11px] text-ritmo-muted">
                           {notificationPermission === 'granted'
-                            ? 'Alertas activas para entregas y exámenes'
+                            ? 'Alertas activas para entregas y eventos'
                             : notificationPermission === 'denied'
                             ? 'Bloqueadas en ajustes de tu navegador'
                             : 'Avisos directos en tu pantalla de bloqueo'}
@@ -764,15 +926,27 @@ export default function RitmoMainPage() {
                     </span>
                   </div>
 
-                  {notificationPermission !== 'granted' && (
+                  <div className="flex flex-col gap-2">
                     <button
-                      onClick={handleRequestNotificationPermission}
-                      className="w-full py-2 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all"
+                      type="button"
+                      onClick={handleTestDeviceNotification}
+                      className="w-full py-2.5 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all"
                     >
-                      <Bell className="w-3.5 h-3.5" />
-                      🔔 Activar Notificaciones en este Dispositivo
+                      <Bell className="w-4 h-4" />
+                      🔔 Probar Notificación en este Dispositivo
                     </button>
-                  )}
+
+                    {notificationPermission !== 'granted' && (
+                      <button
+                        type="button"
+                        onClick={handleRequestNotificationPermission}
+                        className="w-full py-2 px-3 rounded-lg bg-white border border-ritmo-purple/40 text-ritmo-purple font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-purple-50 active:scale-[0.98] transition-all"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        Habilitar Permiso del Sistema
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

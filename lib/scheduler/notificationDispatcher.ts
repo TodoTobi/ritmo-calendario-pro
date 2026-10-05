@@ -229,13 +229,27 @@ export interface DispatchedAlertResult {
   }>;
 }
 
-const CADENCE_CONFIG: Array<{
+/**
+ * Normalizes time strings (e.g. "06:45", "06:45:00", "6:45") into clean "HH:mm:ss".
+ */
+export function normalizeTimeString(timeStr: string): string {
+  if (!timeStr) return '00:00:00';
+  const trimmed = timeStr.trim();
+  const parts = trimmed.split(':');
+  const hours = (parts[0] || '0').padStart(2, '0');
+  const minutes = (parts[1] || '0').padStart(2, '0');
+  const seconds = (parts[2] || '0').slice(0, 2).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+export const CADENCE_CONFIG: Array<{
   cadence: AlertCadence;
   label: string;
   minHours: number;
   maxHours: number;
 }> = [
-  { cadence: '2_hours', label: '2 Horas — Alerta Inminente', minHours: 0, maxHours: 2.5 },
+  { cadence: 'imminent', label: 'Inminente — Menos de 1 Hora', minHours: 0, maxHours: 1 },
+  { cadence: '2_hours', label: '2 Horas — Alerta Inminente', minHours: 1, maxHours: 2.5 },
   { cadence: '24_hours', label: '24 Horas — Mañana', minHours: 2.5, maxHours: 25 },
   { cadence: '2_days', label: '2 Días de Anticipación', minHours: 25, maxHours: 49 },
   { cadence: '3_days', label: '3 Días de Anticipación', minHours: 49, maxHours: 73 },
@@ -306,8 +320,10 @@ export async function dispatchPendingAlerts(referenceDate?: Date): Promise<Dispa
 
   if (upcomingEvents && upcomingEvents.length > 0) {
     for (const ev of upcomingEvents) {
-      // Build ISO event start timestamp
-      const eventStartIso = `${ev.event_date}T${ev.start_time}:00-03:00`;
+      // Build ISO event start timestamp cleanly without invalid colon padding
+      const cleanStartTime = normalizeTimeString(ev.start_time);
+      const cleanEndTime = normalizeTimeString(ev.end_time);
+      const eventStartIso = `${ev.event_date}T${cleanStartTime}-03:00`;
       const eventStartDate = parseISO(eventStartIso);
       const diffHours = (eventStartDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
@@ -319,6 +335,8 @@ export async function dispatchPendingAlerts(referenceDate?: Date): Promise<Dispa
       );
 
       if (!matchingCadence) continue;
+
+      const alertKey = `event:${ev.id}:${matchingCadence.cadence}`;
 
       // Check if alert already sent in alerts_queue
       const { data: existingAlert } = await supabase
@@ -333,21 +351,75 @@ export async function dispatchPendingAlerts(referenceDate?: Date): Promise<Dispa
         continue; // Already notified at this cadence
       }
 
+      // Fallback deduplication check in audit_logs
+      const { data: alreadyAudit } = await supabase
+        .from('audit_logs')
+        .select('id')
+        .eq('entity_type', 'event_alert')
+        .eq('entity_id', alertKey)
+        .maybeSingle();
+
+      if (alreadyAudit) {
+        continue;
+      }
+
+      // Format tier emoji
+      const tierEmoji =
+        ev.tier === 'tier_1'
+          ? '🛡️🔴 Tier 1 (Inamovible)'
+          : ev.tier === 'tier_2'
+          ? '⚡🟡 Tier 2 (Movible)'
+          : '🌱🟢 Tier 3 (Hábito/Carga)';
+
+      const totalMinutes = Math.max(1, Math.round(diffHours * 60));
+      const countdownText =
+        diffHours < 1
+          ? `<b>${totalMinutes} minutos</b>`
+          : `<b>${Math.max(1, Math.round(diffHours))} horas</b>`;
+
       // Dispatch alert via Telegram
       if (recipientChatId) {
-        const text = `🚨 <b>Recordatorio Ritmo [${matchingCadence.label}]</b>\n\n📌 <b>${ev.title}</b>\n🗓 Fecha: <code>${ev.event_date}</code>\n⏰ Horario: <code>${ev.start_time} - ${ev.end_time}</code>\n⏳ Faltan aprox.: <b>${Math.max(1, Math.round(diffHours))} horas</b>`;
+        const text =
+          `🚨 <b>Recordatorio Ritmo [${matchingCadence.label}]</b>\n\n` +
+          `📌 <b>${escapeHtml(ev.title)}</b>\n` +
+          `🏷 Nivel: <b>${tierEmoji}</b>\n` +
+          `🗓 Fecha: <code>${ev.event_date}</code>\n` +
+          `⏰ Horario exacto: <code>${cleanStartTime.slice(0, 5)} - ${cleanEndTime.slice(0, 5)} hs</code>\n` +
+          `⏳ Comienza en: ${countdownText}`;
 
         await sendTelegramMessage(recipientChatId, text);
       }
 
       // Record in alerts_queue
-      await supabase.from('alerts_queue').insert({
-        event_id: ev.id,
-        cadence: matchingCadence.cadence,
-        scheduled_for: now.toISOString(),
-        status: 'dispatched',
-        dispatched_at: now.toISOString(),
-      });
+      try {
+        await supabase.from('alerts_queue').insert({
+          event_id: ev.id,
+          cadence: matchingCadence.cadence,
+          scheduled_for: now.toISOString(),
+          status: 'dispatched',
+          dispatched_at: now.toISOString(),
+        });
+      } catch (insertErr) {
+        console.warn('[NotificationDispatcher] alerts_queue insert warning:', insertErr);
+      }
+
+      // Always record in audit_logs for robust deduplication
+      try {
+        await supabase.from('audit_logs').insert({
+          action: 'dispatch_event_alert',
+          entity_type: 'event_alert',
+          entity_id: alertKey,
+          performed_by: 'tobias_notification_dispatcher',
+          old_state: null,
+          new_state: {
+            event_id: ev.id,
+            title: ev.title,
+            cadence: matchingCadence.cadence,
+          },
+        });
+      } catch (auditErr) {
+        console.warn('[NotificationDispatcher] audit_logs insert warning:', auditErr);
+      }
 
       dispatchedAlerts.push({
         id: ev.id,
@@ -393,8 +465,13 @@ export async function dispatchPendingAlerts(referenceDate?: Date): Promise<Dispa
         continue;
       }
 
+      const classroomCountdown =
+        diffHours < 1
+          ? `<b>${Math.max(1, Math.round(diffHours * 60))} minutos</b>`
+          : `<b>${Math.max(1, Math.round(diffHours))} horas</b>`;
+
       if (recipientChatId) {
-        const alertMsg = `🚨🚨 <b>¡ALERTA DE ENTREGA DE CLASSROOM! [${matchingCadence.label}]</b> 🚨🚨\n\n📚 <b>${escapeHtml(c.course_name)}</b>\n📝 <b>${escapeHtml(c.title)}</b>\n⏰ Vence: <b>${formatInArgentina(dueDate, 'datetime')} hs</b>\n⏳ Faltan aprox.: <b>${Math.max(1, Math.round(diffHours))} horas</b>\n${c.alternate_link ? `🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n\n` : '\n'}<i>¡No te cuelgues! Asegurate de tenerlo listo y entregado.</i>`;
+        const alertMsg = `🚨🚨 <b>¡ALERTA DE ENTREGA DE CLASSROOM! [${matchingCadence.label}]</b> 🚨🚨\n\n📚 <b>${escapeHtml(c.course_name)}</b>\n📝 <b>${escapeHtml(c.title)}</b>\n⏰ Vence: <b>${formatInArgentina(dueDate, 'datetime')} hs</b>\n⏳ Faltan aprox.: ${classroomCountdown}\n${c.alternate_link ? `🔗 <a href="${c.alternate_link}">Abrir en Google Classroom</a>\n\n` : '\n'}<i>¡No te cuelgues! Asegurate de tenerlo listo y entregado.</i>`;
 
         await sendTelegramMessage(recipientChatId, alertMsg);
       }

@@ -92,7 +92,11 @@ export function heuristicParse(text: string): TelegramIntentPayload {
     lower.includes('/hoy') ||
     lower.startsWith('cuál es mi') ||
     lower.startsWith('cual es mi') ||
-    lower.includes('mi agenda')
+    lower.includes('mi agenda') ||
+    lower.includes('recordame') ||
+    lower.includes('recuérdame') ||
+    lower.includes('recuerdame') ||
+    lower.includes('tengo algo')
   ) {
     return {
       action_type: 'QUERY',

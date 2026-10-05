@@ -13,7 +13,7 @@ export type EventColor = 'red' | 'orange' | 'blue' | 'green' | 'yellow' | 'purpl
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'rescheduled' | 'cancelled';
 
-export type AlertCadence = '7_days' | '3_days' | '2_days' | '24_hours' | '2_hours';
+export type AlertCadence = '7_days' | '3_days' | '2_days' | '24_hours' | '2_hours' | 'imminent';
 
 export type AlertStatus = 'scheduled' | 'quiet_suppressed' | 'dispatched' | 'failed';
 

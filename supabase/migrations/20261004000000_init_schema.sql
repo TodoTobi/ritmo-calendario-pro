@@ -27,7 +27,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE alert_cadence AS ENUM ('7_days', '3_days', '2_days', '24_hours', '2_hours');
+    CREATE TYPE alert_cadence AS ENUM ('7_days', '3_days', '2_days', '24_hours', '2_hours', 'imminent');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
