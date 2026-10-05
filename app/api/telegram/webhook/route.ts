@@ -36,11 +36,13 @@ async function getUrgentDeadlineNotice(supabase: any): Promise<string | null> {
     const todayStr = getArgentinaDateString(now);
     const limitDate = new Date(now.getTime() + 36 * 3600 * 1000);
 
-    // 1. Query classroom_sync for pending deliveries
+    // 1. Query classroom_sync for pending deliveries (excluding already turned in or graded)
     const { data: upcomingClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
       .not('due_date', 'is', null)
+      .neq('state', 'TURNED_IN')
+      .neq('state', 'RETURNED')
       .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
       .lte('due_date', limitDate.toISOString())
       .order('due_date', { ascending: true })
@@ -122,20 +124,24 @@ async function handleChatbotQuery(
     lower.includes('tp') ||
     lower.includes('deberes')
   ) {
-    // 1. Query upcoming items with due_date
+    // 1. Query upcoming items with due_date (excluding turned in or graded)
     const { data: upcomingClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
       .not('due_date', 'is', null)
+      .neq('state', 'TURNED_IN')
+      .neq('state', 'RETURNED')
       .gte('due_date', new Date(now.getTime() - 24 * 3600 * 1000).toISOString())
       .order('due_date', { ascending: true })
       .limit(6);
 
-    // 2. Query active 2026 items without due_date
+    // 2. Query active 2026 items without due_date (excluding turned in or graded)
     const { data: noDueClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
       .is('due_date', null)
+      .neq('state', 'TURNED_IN')
+      .neq('state', 'RETURNED')
       .or('course_name.ilike.%2026%,course_name.ilike.%seguridad%,course_name.ilike.%régimen%,course_name.ilike.%educación física%')
       .limit(6);
 
@@ -214,6 +220,8 @@ async function handleChatbotQuery(
     const { data: dayClassroom } = await supabase
       .from('classroom_sync')
       .select('*')
+      .neq('state', 'TURNED_IN')
+      .neq('state', 'RETURNED')
       .gte('due_date', `${targetDate}T00:00:00.000Z`)
       .lte('due_date', `${targetDate}T23:59:59.999Z`);
 
@@ -582,12 +590,36 @@ export async function POST(req: NextRequest) {
     // A. Handle Bot Commands
     if (text === '/start' || text === '/ayuda') {
       let welcomeMsg =
-        '👋 <b>¡Hola!</b> Soy <b>TobIAs</b>, tu asistente de calendario y enfoque personal con IA.\n\nPodés enviarme:\n🎙 <b>Notas de voz</b> con compromisos, láminas o ideas\n📷 <b>Fotos de pizarrones</b> con fechas y fórmulas\n💬 <b>Mensajes de texto</b> directos\n\nComandos rápidos:\n• /hoy — Tu agenda para hoy\n• /ayuda — Guía rápida de uso';
+        '👋 <b>¡Hola!</b> Soy <b>TobIAs</b>, tu asistente de calendario y enfoque personal con IA.\n\nPodés enviarme:\n🎙 <b>Notas de voz</b> con compromisos, láminas o ideas\n📷 <b>Fotos de pizarrones</b> con fechas y fórmulas\n💬 <b>Mensajes de texto</b> directos\n\nComandos rápidos:\n• /hoy — Tu agenda para hoy\n• /notebooklm — Sincronizar y estudiar con NotebookLM\n• /ayuda — Guía rápida de uso';
       if (urgentNotice) {
         welcomeMsg = `${urgentNotice}\n\n----------------------------------------\n\n${welcomeMsg}`;
       }
       await sendTelegramMessage(chatId, welcomeMsg);
       return NextResponse.json({ ok: true, command: text });
+    }
+
+    if (text === '/notebooklm') {
+      try {
+        const driveResult = await syncUtnNotesToDrive();
+        let nlmMsg = '🧠 <b>Google NotebookLM & Apuntes UTN en Ritmo:</b>\n\n';
+        nlmMsg += `📂 <b>Carpeta en Google Drive:</b> <i>Ritmo - UTN Apuntes</i>\n`;
+        nlmMsg += `📝 <b>Notas sincronizadas:</b> ${driveResult.syncedCount}\n\n`;
+        nlmMsg += '🎯 <b>Cómo vincularlo para preparar tus parciales de la UTN:</b>\n';
+        nlmMsg += '1. Entrá a <a href="https://notebooklm.google.com/">Google NotebookLM</a>.\n';
+        nlmMsg += '2. Creá o abrí tu cuaderno de estudio de UTN.\n';
+        nlmMsg += '3. Seleccioná <b>Google Drive</b> y elegí la carpeta <b>Ritmo - UTN Apuntes</b>.\n';
+        nlmMsg += '4. ¡Listo! Vas a tener resúmenes en audio, cuestionarios y guías con tus propias fórmulas y fotos de clase.\n\n';
+        nlmMsg += '💡 <i>Tip: Cada foto de pizarrón que me mandes se transcribe y sube automáticamente a esta carpeta.</i>';
+
+        await sendTelegramMessage(chatId, nlmMsg);
+        return NextResponse.json({ ok: true, command: '/notebooklm', driveResult });
+      } catch (err: any) {
+        await sendTelegramMessage(
+          chatId,
+          '⚠️ Error al sincronizar con Google Drive para NotebookLM. Verificá tu conexión o credenciales en la app.'
+        );
+        return NextResponse.json({ ok: false, error: err.message });
+      }
     }
 
     if (text === '/hoy') {
@@ -605,6 +637,8 @@ export async function POST(req: NextRequest) {
         .from('classroom_sync')
         .select('*')
         .not('due_date', 'is', null)
+        .neq('state', 'TURNED_IN')
+        .neq('state', 'RETURNED')
         .gte('due_date', new Date(now.getTime() - 2 * 3600 * 1000).toISOString())
         .lte('due_date', lookahead)
         .order('due_date', { ascending: true });
@@ -613,6 +647,8 @@ export async function POST(req: NextRequest) {
         .from('classroom_sync')
         .select('*')
         .is('due_date', null)
+        .neq('state', 'TURNED_IN')
+        .neq('state', 'RETURNED')
         .or('course_name.ilike.%2026%,course_name.ilike.%seguridad%,course_name.ilike.%régimen%,course_name.ilike.%educación física%')
         .order('title', { ascending: true })
         .limit(6);

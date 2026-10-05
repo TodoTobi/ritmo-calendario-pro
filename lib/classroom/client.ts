@@ -186,16 +186,38 @@ export async function syncClassroomTasks(): Promise<ClassroomSyncResult> {
     const workData = await workRes.json();
     const courseWorkList: ClassroomCourseWork[] = workData.courseWork || [];
 
+    // 2. Fetch student submissions for this course to identify turned in vs pending assignments
+    const subRes = await fetch(
+      `https://classroom.googleapis.com/v1/courses/${course.id}/courseWork/-/studentSubmissions?userId=me`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const subMap = new Map<string, string>();
+    if (subRes.ok) {
+      const subData = await subRes.json();
+      if (Array.isArray(subData.studentSubmissions)) {
+        for (const sub of subData.studentSubmissions) {
+          subMap.set(sub.courseWorkId, sub.state);
+        }
+      }
+    }
+
     for (const work of courseWorkList) {
       // Only process published courseWork
       if (work.state !== 'PUBLISHED') {
         continue;
       }
 
+      const submissionState = subMap.get(work.id) || 'CREATED';
+      const isCompleted = submissionState === 'TURNED_IN' || submissionState === 'RETURNED';
       const isoDueDate = parseClassroomDueDate(work.dueDate, work.dueTime);
       const difficulty = estimateAssignmentDifficulty(work.title, work.description);
 
-      // A. Upsert into classroom_sync table
+      // A. Upsert into classroom_sync table with real student submission state
       await supabase.from('classroom_sync').upsert(
         {
           course_id: course.id,
@@ -205,18 +227,18 @@ export async function syncClassroomTasks(): Promise<ClassroomSyncResult> {
           description: work.description || null,
           due_date: isoDueDate,
           alternate_link: work.alternateLink || null,
-          state: work.state,
+          state: submissionState,
           last_synced_at: new Date().toISOString(),
         },
         { onConflict: 'coursework_id' }
       );
 
-      // B. Upsert into tasks table as Tier 3 tasks
+      // B. Upsert into tasks table as Tier 3 tasks (completed if turned in / returned)
       await supabase.from('tasks').upsert(
         {
           title: `[${course.name}] ${work.title}`,
           description: work.description || null,
-          status: 'pending',
+          status: isCompleted ? 'completed' : 'pending',
           priority_tier: 'tier_3',
           due_date: isoDueDate,
           difficulty_score: difficulty,
@@ -225,13 +247,15 @@ export async function syncClassroomTasks(): Promise<ClassroomSyncResult> {
         { onConflict: 'classroom_coursework_id' }
       );
 
-      syncedItems.push({
-        courseworkId: work.id,
-        courseName: course.name,
-        title: work.title,
-        dueDate: isoDueDate,
-        difficultyScore: difficulty,
-      });
+      if (!isCompleted) {
+        syncedItems.push({
+          courseworkId: work.id,
+          courseName: course.name,
+          title: work.title,
+          dueDate: isoDueDate,
+          difficultyScore: difficulty,
+        });
+      }
     }
   }
 

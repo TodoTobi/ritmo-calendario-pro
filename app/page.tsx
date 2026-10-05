@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   ExternalLink,
   Bell,
+  Cloud,
 } from 'lucide-react';
 import { generateRealOctoberEvents, generateRealNotes } from '@/lib/seed-data';
 import { supabaseBrowserClient } from '@/lib/supabase/client';
@@ -63,6 +64,10 @@ export default function RitmoMainPage() {
   const [classroomNoDueTasks, setClassroomNoDueTasks] = useState<any[]>([]);
   const [isSyncingClassroom, setIsSyncingClassroom] = useState<boolean>(false);
   const [classroomFeedback, setClassroomFeedback] = useState<string | null>(null);
+
+  // Google Drive & NotebookLM sync state
+  const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
+  const [driveFeedback, setDriveFeedback] = useState<string | null>(null);
 
   // Mobile / Browser Push Notification State
   const [notificationPermission, setNotificationPermission] = useState<string>('default');
@@ -135,10 +140,12 @@ export default function RitmoMainPage() {
           setNotes(dbNotes as NoteItem[]);
         }
 
-        // Fetch Google Classroom coursework sync items
+        // Fetch Google Classroom coursework sync items (only active, pending/unsubmitted)
         const { data: dbClassroom, error: clErr } = await supabaseBrowserClient
           .from('classroom_sync')
           .select('*')
+          .neq('state', 'TURNED_IN')
+          .neq('state', 'RETURNED')
           .order('due_date', { ascending: true });
 
         if (!clErr && dbClassroom && dbClassroom.length > 0) {
@@ -325,6 +332,25 @@ export default function RitmoMainPage() {
       setClassroomFeedback('Error al sincronizar Classroom.');
     } finally {
       setIsSyncingClassroom(false);
+    }
+  };
+
+  const handleSyncDrive = async () => {
+    setIsSyncingDrive(true);
+    setDriveFeedback(null);
+    try {
+      const res = await fetch('/api/drive/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setDriveFeedback(`¡Sincronizado! ${data.syncedCount} notas en Drive para NotebookLM.`);
+      } else {
+        setDriveFeedback('Error al sincronizar notas con Drive.');
+      }
+    } catch {
+      setDriveFeedback('Error de red al sincronizar con Drive.');
+    } finally {
+      setIsSyncingDrive(false);
+      setTimeout(() => setDriveFeedback(null), 5000);
     }
   };
 
@@ -662,6 +688,45 @@ export default function RitmoMainPage() {
                   {classroomFeedback && (
                     <p className="text-[11px] font-medium text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
                       {classroomFeedback}
+                    </p>
+                  )}
+                </div>
+
+                {/* Google Drive & NotebookLM Source Feed */}
+                <div className="p-3 rounded-xl bg-ritmo-soft border border-ritmo-line/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Cloud className="w-4 h-4 text-ritmo-purple" />
+                      <div>
+                        <p className="font-bold text-ritmo-ink">Google NotebookLM & Drive</p>
+                        <p className="text-[11px] text-ritmo-muted">
+                          Carpeta viva: &quot;Ritmo - UTN Apuntes&quot;
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="https://notebooklm.google.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-bold text-ritmo-purple px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 hover:bg-purple-100 flex items-center gap-1 transition-colors"
+                    >
+                      <span>Abrir</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+
+                  <button
+                    onClick={handleSyncDrive}
+                    disabled={isSyncingDrive}
+                    className="w-full py-1.5 px-3 rounded-lg bg-ritmo-purple hover:bg-ritmo-purple/90 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDrive ? 'animate-spin' : ''}`} />
+                    {isSyncingDrive ? 'Sincronizando con Drive...' : '☁️ Sincronizar Apuntes con Drive'}
+                  </button>
+
+                  {driveFeedback && (
+                    <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded border border-purple-200">
+                      {driveFeedback}
                     </p>
                   )}
                 </div>

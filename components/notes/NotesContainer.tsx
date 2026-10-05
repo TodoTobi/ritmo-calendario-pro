@@ -1,7 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { NoteItem } from '@/types/database.types';
 import { formatDayHeader } from '@/lib/date-utils';
-import { Plus, CheckCircle, Circle, Search, BookOpen, Sparkles, Trash2 } from 'lucide-react';
+import {
+  Plus,
+  CheckCircle,
+  Circle,
+  Search,
+  BookOpen,
+  Sparkles,
+  Trash2,
+  Cloud,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react';
 
 interface NotesContainerProps {
   selectedDateStr: string;
@@ -32,6 +43,27 @@ export const NotesContainer: React.FC<NotesContainerProps> = ({
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCreatingNote, setIsCreatingNote] = useState<boolean>(false);
+  const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
+  const [syncDriveMsg, setSyncDriveMsg] = useState<string | null>(null);
+
+  const handleSyncDrive = async () => {
+    setIsSyncingDrive(true);
+    setSyncDriveMsg(null);
+    try {
+      const res = await fetch('/api/drive/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setSyncDriveMsg(`¡Sincronizado! ${data.syncedCount} notas en Drive para NotebookLM.`);
+      } else {
+        setSyncDriveMsg('Error al sincronizar con Drive');
+      }
+    } catch {
+      setSyncDriveMsg('Error de red al sincronizar con Drive');
+    } finally {
+      setIsSyncingDrive(false);
+      setTimeout(() => setSyncDriveMsg(null), 4000);
+    }
+  };
 
   // New Note Form State
   const [newTitle, setNewTitle] = useState<string>('');
@@ -187,6 +219,44 @@ export const NotesContainer: React.FC<NotesContainerProps> = ({
             );
           })}
         </div>
+
+        {/* NotebookLM / Drive Sync Ribbon */}
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <Cloud className="w-4 h-4 text-ritmo-purple shrink-0" />
+            <div className="min-w-0">
+              <span className="font-bold text-ritmo-ink truncate block">NotebookLM & Drive</span>
+              <span className="text-[10px] text-ritmo-muted">Apuntes #utn como fuente viva</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleSyncDrive}
+              disabled={isSyncingDrive}
+              className="py-1 px-2.5 rounded-lg bg-ritmo-purple text-white font-bold text-[11px] flex items-center gap-1 hover:bg-ritmo-purple/90 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncingDrive ? 'animate-spin' : ''}`} />
+              <span>{isSyncingDrive ? 'Sync...' : 'Sincronizar'}</span>
+            </button>
+            <a
+              href="https://notebooklm.google.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-1 px-2 rounded-lg bg-white border border-purple-200 text-ritmo-purple font-bold text-[11px] flex items-center gap-1 hover:bg-purple-50 transition-colors"
+              title="Abrir Google NotebookLM"
+            >
+              <span>Abrir</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+
+        {syncDriveMsg && (
+          <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded-xl border border-purple-200 animate-fadeIn">
+            {syncDriveMsg}
+          </p>
+        )}
       </div>
 
       {/* Note Creation Form Drawer/Panel */}
