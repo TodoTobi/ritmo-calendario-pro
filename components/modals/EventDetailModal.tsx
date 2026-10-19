@@ -34,17 +34,23 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-      <div className="w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-white p-5 shadow-2xl safe-pb animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-0 sm:p-4 font-nunito">
+      <div className="w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-white p-6 border-2 border-duo-border-light shadow-duo-sticker safe-pb animate-fadeIn">
         {/* Header with Color Accent */}
-        <div className="flex items-start justify-between border-b border-ritmo-line pb-3">
+        <div className="flex items-start justify-between border-b-2 border-duo-border-light pb-3">
           <div className="flex items-center gap-2">
             <span
               className="w-3.5 h-3.5 rounded-full"
               style={{ backgroundColor: colorScheme.accent }}
             />
             <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-full ${colorScheme.bg} ${colorScheme.text}`}
+              className={`text-xs font-extrabold px-3 py-0.5 rounded-xl uppercase border-2 ${
+                isTier1
+                  ? 'bg-[#ffebee] text-[#ea2b2b] border-[#ff4b4b]'
+                  : event.tier === 'tier_2'
+                  ? 'bg-[#ddf4ff] text-duo-blue border-duo-blue'
+                  : 'bg-duo-green-light text-duo-green border-duo-green'
+              }`}
             >
               {tierConfig.label}
             </span>
@@ -54,34 +60,34 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="p-1 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft"
+            className="p-1 rounded-xl text-duo-gray hover:text-duo-charcoal hover:bg-gray-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 stroke-[2.5]" />
           </button>
         </div>
 
         {/* Content */}
         <div className="mt-4 space-y-4">
           <div>
-            <h3 className="font-manrope text-lg font-bold text-ritmo-ink">
+            <h3 className="text-lg font-extrabold tracking-tight text-duo-charcoal">
               {event.title}
             </h3>
             {event.description && (
-              <p className="text-xs text-ritmo-muted mt-1 leading-relaxed">
+              <p className="text-xs text-duo-gray mt-1 leading-relaxed font-bold">
                 {event.description}
               </p>
             )}
           </div>
 
           {/* Time & Date Badges */}
-          <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-ritmo-soft text-ritmo-ink">
-              <Calendar className="w-4 h-4 text-ritmo-muted shrink-0" />
+          <div className="grid grid-cols-2 gap-2.5 text-xs font-extrabold">
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-[#f7f7f7] text-duo-charcoal border-2 border-duo-border-light">
+              <Calendar className="w-4 h-4 text-duo-gray shrink-0" />
               <span>{event.event_date}</span>
             </div>
 
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-ritmo-soft text-ritmo-ink">
-              <Clock className="w-4 h-4 text-ritmo-muted shrink-0" />
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-[#f7f7f7] text-duo-charcoal border-2 border-duo-border-light">
+              <Clock className="w-4 h-4 text-duo-gray shrink-0" />
               <span>
                 {event.start_time.slice(0, 5)} – {event.end_time.slice(0, 5)}
               </span>
@@ -89,28 +95,28 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           </div>
 
           {/* Difficulty & Sync Details */}
-          <div className="rounded-xl border border-ritmo-line p-3 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-ritmo-muted">
-              <span className="flex items-center gap-1 font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-ritmo-orange" /> Dificultad Académica:
+          <div className="rounded-2xl border-2 border-duo-border-light bg-[#f7f7f7] p-4 space-y-2 text-xs">
+            <div className="flex items-center justify-between text-duo-gray">
+              <span className="flex items-center gap-1.5 font-extrabold text-duo-charcoal">
+                <Sparkles className="w-3.5 h-3.5 text-duo-green" /> Dificultad Académica:
               </span>
-              <span className="font-bold text-ritmo-ink">
+              <span className="font-extrabold px-2.5 py-0.5 rounded-lg bg-[#fff9db] text-[#b88c00] border-2 border-[#ffc800]">
                 {event.difficulty_score ? `${event.difficulty_score} / 5` : 'Estándar (2/5)'}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-ritmo-muted">
-              <span className="flex items-center gap-1 font-semibold">
-                <BookOpen className="w-3.5 h-3.5 text-ritmo-blue" /> Origen:
+            <div className="flex items-center justify-between text-duo-gray pt-1">
+              <span className="flex items-center gap-1.5 font-extrabold text-duo-charcoal">
+                <BookOpen className="w-3.5 h-3.5 text-duo-blue" /> Origen:
               </span>
-              <span className="font-bold text-ritmo-ink uppercase text-[10px]">
+              <span className="font-extrabold text-duo-charcoal uppercase text-[10px] px-2.5 py-0.5 rounded-lg bg-white border-2 border-duo-border-light">
                 {event.created_from}
               </span>
             </div>
 
             {isTier1 && (
-              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-[#ff5d63] bg-[#fff0f1] p-2 rounded-lg">
-                <Lock className="w-4 h-4 shrink-0" />
+              <div className="mt-2 flex items-center gap-2 text-xs font-extrabold text-[#ea2b2b] bg-[#ffebee] p-2.5 rounded-xl border-2 border-[#ff4b4b]">
+                <Lock className="w-4 h-4 shrink-0 text-[#ea2b2b]" />
                 <span>Bloque protegido: no se permite superposición ni reprogramación automática.</span>
               </div>
             )}
@@ -121,7 +127,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               href="https://classroom.google.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-duo-blue hover:opacity-95 text-white font-extrabold uppercase tracking-wide text-xs shadow-duo-blue transition-all active:translate-y-0.5"
             >
               <ExternalLink className="w-4 h-4" />
               <span>Abrir en Google Classroom</span>
@@ -129,12 +135,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-3 pt-2">
             {!isTier1 && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-ritmo-red/40 text-ritmo-red text-xs font-bold hover:bg-ritmo-red/10 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-5 py-3 rounded-xl border-2 border-[#ff4b4b] text-[#ea2b2b] text-xs font-extrabold uppercase hover:bg-red-50 transition-colors active:translate-y-0.5"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Eliminar</span>
@@ -144,7 +150,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl bg-ritmo-ink text-white text-xs font-bold hover:bg-ritmo-ink/90 shadow-sm"
+              className="flex-1 py-3 rounded-xl bg-duo-green text-white text-xs font-extrabold uppercase tracking-wide shadow-duo-green hover:opacity-95 transition-all active:translate-y-0.5"
             >
               Cerrar
             </button>

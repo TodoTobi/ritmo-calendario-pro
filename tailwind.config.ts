@@ -10,52 +10,74 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Duolingo Style Reference Tokens (DESIGN (3).md)
+        duo: {
+          green: '#58cc02', // Eager Green
+          'green-light': '#d7ffb8', // Storybook Green
+          'green-leaf': '#a5ed6e', // Fresh Leaf
+          blue: '#1cb0f6', // Spark Blue
+          ink: '#000437', // Night Ink
+          white: '#ffffff', // Paper White
+          charcoal: '#4b4b4b', // Charcoal (Headings & workhorse text)
+          gray: '#777777', // Pencil Gray (Body copy & secondary)
+          'gray-faded': '#afafaf', // Faded Gray (Borders & low-emphasis)
+          'border-light': '#e5e5e5', // Light divider border
+        },
+        // Backward-compatible semantic tokens mapped to Duolingo palette
         ritmo: {
           purple: {
-            DEFAULT: '#6558f5',
-            soft: '#eeedff',
+            DEFAULT: '#58cc02', // Eager Green primary
+            soft: '#d7ffb8',
           },
           red: {
-            DEFAULT: '#ff5d63',
-            soft: '#fff0f1',
+            DEFAULT: '#ff4b4b', // Duolingo warning/alert red
+            soft: '#ffebee',
           },
           orange: {
-            DEFAULT: '#f2a641',
-            soft: '#fff5e6',
+            DEFAULT: '#ff9600', // Duolingo orange / streak
+            soft: '#fff4e5',
           },
           blue: {
-            DEFAULT: '#4c9af5',
-            soft: '#edf6ff',
+            DEFAULT: '#1cb0f6', // Spark Blue
+            soft: '#ddf4ff',
           },
           green: {
-            DEFAULT: '#46a978',
-            soft: '#edf9f3',
+            DEFAULT: '#58cc02', // Eager Green
+            soft: '#d7ffb8',
           },
           yellow: {
-            DEFAULT: '#e7c94a',
-            soft: '#fffbea',
+            DEFAULT: '#ffc800', // Duolingo gold/gem
+            soft: '#fff9db',
           },
-          bg: '#f5f6f8',
-          panel: '#ffffff',
-          ink: '#151719',
-          muted: '#7b8188',
-          line: '#e9ebef',
-          soft: '#f7f8fa',
+          bg: '#ffffff', // Paper White
+          panel: '#ffffff', // White cards with 2px borders
+          ink: '#4b4b4b', // Charcoal
+          muted: '#777777', // Pencil Gray
+          line: '#e5e5e5', // Border line
+          soft: '#f7f7f7', // Light neutral wash
         },
       },
       fontFamily: {
-        manrope: ['var(--font-manrope)', 'sans-serif'],
-        sans: ['var(--font-dm-sans)', 'sans-serif'],
+        nunito: ['var(--font-nunito)', 'sans-serif'],
+        sans: ['var(--font-nunito)', 'sans-serif'],
+        feather: ['var(--font-nunito)', 'sans-serif'],
+        inter: ['var(--font-nunito)', 'sans-serif'],
+        manrope: ['var(--font-nunito)', 'sans-serif'],
       },
       borderRadius: {
-        'ritmo-card': '18px',
+        'duo-button': '12px',
+        'duo-card': '16px',
+        'duo-pill': '9999px',
+        'ritmo-card': '16px',
         'ritmo-button': '12px',
-        'ritmo-pill': '8px',
+        'ritmo-pill': '9999px',
       },
       boxShadow: {
-        'ritmo-card': '0 18px 50px rgba(28, 31, 36, 0.07)',
-        'ritmo-soft': '0 8px 22px rgba(28, 31, 36, 0.05)',
-        'ritmo-modal': '0 30px 100px rgba(0, 0, 0, 0.18)',
+        'duo-sticker': '0 2px 0 0 #afafaf',
+        'duo-green': '0 4px 0 0 #46a302',
+        'duo-blue': '0 4px 0 0 #1899d6',
+        'duo-white': '0 2px 0 0 #e5e5e5',
+        none: 'none',
       },
     },
   },

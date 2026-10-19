@@ -23,48 +23,48 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenMonthYearPicker,
 }) => {
   return (
-    <header className="sticky top-0 z-20 flex flex-col border-b border-ritmo-line/80 bg-white/95 px-4 pt-3 pb-2.5 backdrop-blur-md">
+    <header className="sticky top-0 z-20 flex flex-col border-b-2 border-duo-border-light bg-white/95 px-4 pt-3 pb-2.5 backdrop-blur-xs font-nunito">
       <div className="flex items-center justify-between gap-2">
         {/* Month Title & Chevron Navigation */}
-        <div className="flex items-center gap-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <button
             type="button"
             onClick={onOpenMonthYearPicker}
             aria-label={`Seleccionar mes y año, actualmente ${currentDateText}`}
-            className="group flex items-center gap-1 text-left rounded-xl py-1 px-1.5 -ml-1.5 transition-colors hover:bg-ritmo-soft active:scale-[0.98]"
+            className="group flex items-center gap-1.5 text-left rounded-xl py-1 px-2.5 -ml-1 transition-colors hover:bg-duo-green-light/30 active:scale-[0.98]"
           >
-            <h1 className="font-manrope text-xl font-extrabold tracking-tight text-ritmo-ink capitalize truncate group-hover:text-ritmo-purple transition-colors">
+            <h1 className="text-xl font-extrabold tracking-tight text-duo-charcoal capitalize truncate group-hover:text-duo-green transition-colors">
               {currentDateText}
             </h1>
-            <ChevronDown className="w-4 h-4 text-ritmo-muted group-hover:text-ritmo-purple transition-colors shrink-0" />
+            <ChevronDown className="w-4 h-4 text-duo-gray group-hover:text-duo-green transition-colors shrink-0" />
           </button>
-          <div className="flex items-center ml-0.5">
+          <div className="flex items-center gap-1 ml-0.5">
             <button
               type="button"
               onClick={onPrevMonth}
               aria-label="Mes anterior"
-              className="p-1 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft transition-colors"
+              className="p-1 rounded-xl border-2 border-duo-gray-faded/40 text-duo-gray hover:text-duo-charcoal hover:border-duo-green hover:bg-duo-green-light/20 transition-all"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={onNextMonth}
               aria-label="Mes siguiente"
-              className="p-1 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft transition-colors"
+              className="p-1 rounded-xl border-2 border-duo-gray-faded/40 text-duo-gray hover:text-duo-charcoal hover:border-duo-green hover:bg-duo-green-light/20 transition-all"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Quick "Hoy" Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Quick "Hoy" Button — Duolingo Eager Green Sticker Button */}
           <button
             type="button"
             onClick={onTodayClick}
-            className="rounded-full border border-ritmo-purple/40 bg-ritmo-purple-soft px-3 py-1 text-xs font-bold text-ritmo-purple transition-all duration-150 active:scale-95 hover:bg-ritmo-purple hover:text-white"
+            className="rounded-xl bg-duo-green px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider text-white shadow-duo-green transition-all active:translate-y-0.5"
           >
             Hoy
           </button>
@@ -75,10 +75,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             onClick={onToggleFocusMode}
             aria-label="Modo Foco"
             title={isFocusMode ? 'Modo Foco Activo (Solo UTN y Prioridades)' : 'Activar Modo Foco'}
-            className={`p-2 rounded-full transition-colors ${
+            className={`p-1.5 rounded-xl border-2 transition-all ${
               isFocusMode
-                ? 'bg-ritmo-red text-white'
-                : 'text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft'
+                ? 'bg-duo-blue text-white border-duo-blue shadow-duo-blue'
+                : 'text-duo-gray border-duo-gray-faded/40 hover:text-duo-charcoal hover:border-duo-gray-faded'
             }`}
           >
             <Filter className="w-4 h-4" />
@@ -89,7 +89,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             type="button"
             onClick={onSearchClick}
             aria-label="Buscar eventos"
-            className="p-2 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft transition-colors"
+            className="p-1.5 rounded-xl border-2 border-duo-gray-faded/40 text-duo-gray hover:text-duo-charcoal hover:border-duo-gray-faded transition-all"
           >
             <Search className="w-4 h-4" />
           </button>
@@ -97,15 +97,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       </div>
 
       {isFocusMode && (
-        <div className="mt-2 flex items-center justify-between rounded-lg bg-[#fff0f1] px-2.5 py-1 text-[11px] font-semibold text-[#ff5d63] border border-[#ff5d63]/20">
-          <span className="flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            Modo Foco Activo — Mostrando únicamente bloques Tier 1 y UTN
+        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-duo-green-light/50 px-3.5 py-1.5 text-xs font-bold text-duo-charcoal border-2 border-duo-green">
+          <span className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-duo-green shrink-0" />
+            Modo Foco — Mostrando únicamente bloques Tier 1 y UTN
           </span>
           <button
             type="button"
             onClick={onToggleFocusMode}
-            className="underline text-[10px] ml-2"
+            className="underline text-[11px] ml-2 font-extrabold text-duo-blue hover:text-duo-charcoal"
           >
             Desactivar
           </button>

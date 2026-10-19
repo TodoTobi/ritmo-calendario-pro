@@ -637,7 +637,7 @@ export default function RitmoMainPage() {
   const currentMonthFormatted = formatDateSafe(currentDate, 'MMMM yyyy');
 
   return (
-    <div className="flex flex-col h-screen w-full bg-ritmo-bg overflow-hidden text-ritmo-ink">
+    <div className="flex flex-col h-screen w-full bg-white overflow-hidden text-duo-charcoal font-nunito">
       {/* Top Header */}
       <TopHeader
         currentDateText={currentMonthFormatted}
@@ -651,7 +651,7 @@ export default function RitmoMainPage() {
       />
 
       {/* Main Content Area based on Active Bottom Tab */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 flex flex-col overflow-hidden relative bg-white">
         {activeTab === 'calendar' && (
           <div className="flex-1 overflow-y-auto pb-24 scroll-smooth">
             {/* Full-Screen Hero Month View with swipe navigation */}
@@ -665,14 +665,14 @@ export default function RitmoMainPage() {
             />
 
             {/* Continuous Vertical Feed of Days and Events */}
-            <div id="agenda-section" className="border-t border-ritmo-line/80 bg-white">
-              <div className="px-4 py-2.5 bg-ritmo-soft/80 flex items-center justify-between border-b border-ritmo-line sticky top-0 z-10 backdrop-blur-md">
+            <div id="agenda-section" className="border-t-2 border-duo-border-light bg-white">
+              <div className="px-4 py-2.5 bg-white/95 flex items-center justify-between border-b-2 border-duo-border-light sticky top-0 z-10 backdrop-blur-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-ritmo-purple font-manrope">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-duo-charcoal">
                     Actividades: {formatDateSafe(selectedDate, "EEEE d 'de' MMMM")}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-ritmo-purple/10 text-ritmo-purple">
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-xl bg-duo-green-light text-duo-green border-2 border-duo-green uppercase tracking-wide">
                   {displayedEvents.filter((e) => e.event_date === selectedDateStr).length} actividades
                 </span>
               </div>
@@ -709,22 +709,22 @@ export default function RitmoMainPage() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
-            <div className="rounded-2xl bg-white p-5 shadow-sm border border-ritmo-line space-y-4">
-              <h2 className="font-manrope text-base font-extrabold text-ritmo-ink flex items-center gap-2">
-                <Settings className="w-5 h-5 text-ritmo-purple" />
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-28 bg-white">
+            <div className="rounded-2xl bg-white p-5 border-2 border-duo-border-light shadow-duo-white space-y-4">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-duo-charcoal flex items-center gap-2">
+                <Settings className="w-5 h-5 text-duo-green" />
                 Configuración del Asistente Ritmo
               </h2>
 
               <div className="space-y-3 text-xs">
                 {/* Database Sync Card */}
-                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-2.5">
+                <div className="p-4 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Database className="w-4 h-4 text-ritmo-purple" />
+                      <Database className="w-4 h-4 text-duo-green" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Base de Datos Supabase</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-extrabold text-duo-charcoal">Base de Datos Supabase</p>
+                        <p className="text-[11px] text-duo-gray font-bold">
                           {dbStatus === 'connected' && 'Sincronizado con tablas remotas'}
                           {dbStatus === 'empty' && 'Tablas vacías (listo para sembrar)'}
                           {dbStatus === 'missing_tables' && 'Tablas pendientes de crear en SQL'}
@@ -733,12 +733,12 @@ export default function RitmoMainPage() {
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-xl border-2 ${
                         dbStatus === 'connected'
-                          ? 'bg-green-50 text-ritmo-green border-green-200'
+                          ? 'bg-duo-green-light text-duo-green border-duo-green'
                           : dbStatus === 'missing_tables'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-blue-50 text-ritmo-blue border-blue-200'
+                          ? 'bg-[#ffebee] text-[#ea2b2b] border-[#ff4b4b]'
+                          : 'bg-[#ddf4ff] text-duo-blue border-duo-blue'
                       }`}
                     >
                       {dbStatus === 'connected' ? 'En Línea' : dbStatus === 'missing_tables' ? 'Falta SQL' : 'Conectando'}
@@ -746,19 +746,19 @@ export default function RitmoMainPage() {
                   </div>
 
                   {dbStatus === 'missing_tables' && (
-                    <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
-                      <div className="flex items-center gap-1 font-bold">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <div className="p-3 rounded-xl bg-[#ffebee] border-2 border-[#ff4b4b] text-[11px] text-[#ea2b2b] space-y-1">
+                      <div className="flex items-center gap-1 font-extrabold">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-[#ea2b2b]" />
                         Paso pendiente en Supabase Dashboard:
                       </div>
-                      <p>
+                      <p className="font-bold">
                         Abre tu proyecto de Supabase, ve a <strong>SQL Editor</strong>, pega el contenido del archivo de migración y presiona <strong>Run</strong>.
                       </p>
                       <a
                         href="https://supabase.com/dashboard/project/fvqwfrjpoadvvbskgddz/sql/new"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-bold text-ritmo-purple underline text-[10px] pt-1"
+                        className="inline-flex items-center gap-1 font-extrabold text-[#ea2b2b] underline text-[10px] pt-1"
                       >
                         Abrir SQL Editor en Supabase <ExternalLink className="w-2.5 h-2.5" />
                       </a>
@@ -768,72 +768,72 @@ export default function RitmoMainPage() {
                   <button
                     onClick={handlePushRealDataToSupabase}
                     disabled={isSyncingDb}
-                    className="w-full py-2 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all disabled:opacity-50"
+                    className="w-full py-2.5 px-4 rounded-xl bg-duo-green text-white font-extrabold uppercase text-xs flex items-center justify-center gap-2 shadow-duo-green hover:opacity-95 active:translate-y-0.5 transition-all disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDb ? 'animate-spin' : ''}`} />
                     {isSyncingDb ? 'Sincronizando...' : '🌱 Cargar Datos Reales a Supabase'}
                   </button>
 
                   {syncFeedback && (
-                    <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded border border-purple-100">
+                    <p className="text-xs font-extrabold text-duo-green bg-duo-green-light p-2 rounded-xl border-2 border-duo-green text-center">
                       {syncFeedback}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-ritmo-green" />
+                    <ShieldCheck className="w-4 h-4 text-duo-green" />
                     <div>
-                      <p className="font-bold text-ritmo-ink">Modo Monousuario Soberano</p>
-                      <p className="text-ritmo-muted">Propietario (GMT-3 Buenos Aires)</p>
+                      <p className="font-extrabold text-duo-charcoal">Modo Monousuario Soberano</p>
+                      <p className="text-duo-gray font-bold">Propietario (GMT-3 Buenos Aires)</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-green px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
+                  <span className="text-[10px] font-extrabold uppercase text-duo-green px-2.5 py-0.5 rounded-xl bg-duo-green-light border-2 border-duo-green">
                     Activo
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light">
                   <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-ritmo-purple" />
+                    <Bot className="w-4 h-4 text-duo-blue" />
                     <div>
-                      <p className="font-bold text-ritmo-ink">Google Gemini 2.0 Flash</p>
-                      <p className="text-ritmo-muted">Audio OGG/Opus & Visión Multimodal</p>
+                      <p className="font-extrabold text-duo-charcoal">Google Gemini 2.0 Flash</p>
+                      <p className="text-duo-gray font-bold">Audio OGG/Opus & Visión Multimodal</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-purple px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200">
+                  <span className="text-[10px] font-extrabold uppercase text-duo-blue px-2.5 py-0.5 rounded-xl bg-[#ddf4ff] border-2 border-duo-blue">
                     Conectado
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="w-4 h-4 text-ritmo-blue" />
+                    <Smartphone className="w-4 h-4 text-duo-blue" />
                     <div>
-                      <p className="font-bold text-ritmo-ink">Telegram Bot Webhook</p>
-                      <p className="text-ritmo-muted">@ritmo_lucas_bot</p>
+                      <p className="font-extrabold text-duo-charcoal">Telegram Bot Webhook</p>
+                      <p className="text-duo-gray font-bold">@ritmo_lucas_bot</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-blue px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                  <span className="text-[10px] font-extrabold uppercase text-duo-blue px-2.5 py-0.5 rounded-xl bg-[#ddf4ff] border-2 border-duo-blue">
                     Listo
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-ritmo-soft border border-ritmo-line/50 space-y-2">
+                <div className="p-3.5 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-ritmo-blue" />
+                      <BookOpen className="w-4 h-4 text-duo-blue" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Google Classroom (tv286206@gmail.com)</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-extrabold text-duo-charcoal">Google Classroom (tv286206@gmail.com)</p>
+                        <p className="text-[11px] text-duo-gray font-bold">
                           {classroomCount > 0
                             ? `${classroomCount} tareas y entregas sincronizadas`
                             : '27 cursos activos vinculados'}
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-ritmo-blue px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                    <span className="text-[10px] font-extrabold uppercase text-duo-blue px-2.5 py-0.5 rounded-xl bg-[#ddf4ff] border-2 border-duo-blue">
                       Conectado
                     </span>
                   </div>
@@ -841,27 +841,27 @@ export default function RitmoMainPage() {
                   <button
                     onClick={handleSyncClassroom}
                     disabled={isSyncingClassroom}
-                    className="w-full py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="w-full py-2 px-4 rounded-xl bg-duo-blue hover:opacity-95 text-white font-extrabold uppercase tracking-wide text-xs flex items-center justify-center gap-2 shadow-duo-blue transition-all active:translate-y-0.5 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingClassroom ? 'animate-spin' : ''}`} />
                     {isSyncingClassroom ? 'Sincronizando Classroom...' : '🔄 Sincronizar Classroom Ahora'}
                   </button>
 
                   {classroomFeedback && (
-                    <p className="text-[11px] font-medium text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
+                    <p className="text-xs font-extrabold text-duo-blue bg-[#ddf4ff] p-2 rounded-xl border-2 border-duo-blue text-center">
                       {classroomFeedback}
                     </p>
                   )}
                 </div>
 
                 {/* Google Drive & NotebookLM Source Feed */}
-                <div className="p-3 rounded-xl bg-ritmo-soft border border-ritmo-line/50 space-y-2">
+                <div className="p-3.5 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Cloud className="w-4 h-4 text-ritmo-purple" />
+                      <Cloud className="w-4 h-4 text-duo-green" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Google NotebookLM & Drive</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-extrabold text-duo-charcoal">Google NotebookLM & Drive</p>
+                        <p className="text-[11px] text-duo-gray font-bold">
                           Carpeta viva: &quot;Ritmo - UTN Apuntes&quot;
                         </p>
                       </div>
@@ -870,37 +870,37 @@ export default function RitmoMainPage() {
                       href="https://notebooklm.google.com/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] font-bold text-ritmo-purple px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 hover:bg-purple-100 flex items-center gap-1 transition-colors"
+                      className="text-[10px] font-extrabold uppercase text-duo-charcoal px-2.5 py-0.5 rounded-xl bg-white border-2 border-duo-border-light hover:border-duo-green flex items-center gap-1 transition-colors"
                     >
                       <span>Abrir</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
+                      <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
 
                   <button
                     onClick={handleSyncDrive}
                     disabled={isSyncingDrive}
-                    className="w-full py-1.5 px-3 rounded-lg bg-ritmo-purple hover:bg-ritmo-purple/90 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="w-full py-2 px-4 rounded-xl bg-duo-green hover:opacity-95 text-white font-extrabold uppercase tracking-wide text-xs flex items-center justify-center gap-2 shadow-duo-green transition-all active:translate-y-0.5 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDrive ? 'animate-spin' : ''}`} />
                     {isSyncingDrive ? 'Sincronizando con Drive...' : '☁️ Sincronizar Apuntes con Drive'}
                   </button>
 
                   {driveFeedback && (
-                    <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded border border-purple-200">
+                    <p className="text-xs font-extrabold text-duo-green bg-duo-green-light p-2 rounded-xl border-2 border-duo-green text-center">
                       {driveFeedback}
                     </p>
                   )}
                 </div>
 
                 {/* Mobile / Device Push Notifications */}
-                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-3">
+                <div className="p-3.5 rounded-xl bg-[#f7f7f7] border-2 border-duo-border-light space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-ritmo-purple" />
+                      <Bell className="w-4 h-4 text-[#ea2b2b]" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Notificaciones en este Dispositivo</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-extrabold text-duo-charcoal">Notificaciones en este Dispositivo</p>
+                        <p className="text-[11px] text-duo-gray font-bold">
                           {notificationPermission === 'granted'
                             ? 'Alertas activas para entregas y eventos'
                             : notificationPermission === 'denied'
@@ -910,12 +910,12 @@ export default function RitmoMainPage() {
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-xl border-2 ${
                         notificationPermission === 'granted'
-                          ? 'bg-green-50 text-ritmo-green border-green-200'
+                          ? 'bg-duo-green-light text-duo-green border-duo-green'
                           : notificationPermission === 'denied'
-                          ? 'bg-red-50 text-ritmo-red border-red-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                          ? 'bg-[#ffebee] text-[#ea2b2b] border-[#ff4b4b]'
+                          : 'bg-white text-duo-gray border-duo-border-light'
                       }`}
                     >
                       {notificationPermission === 'granted'
@@ -930,9 +930,9 @@ export default function RitmoMainPage() {
                     <button
                       type="button"
                       onClick={handleTestDeviceNotification}
-                      className="w-full py-2.5 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all"
+                      className="w-full py-2.5 px-4 rounded-xl bg-duo-charcoal text-white font-extrabold uppercase text-xs flex items-center justify-center gap-2 shadow-duo-sticker hover:opacity-95 active:translate-y-0.5 transition-all"
                     >
-                      <Bell className="w-4 h-4" />
+                      <Bell className="w-4 h-4 text-duo-green" />
                       🔔 Probar Notificación en este Dispositivo
                     </button>
 
@@ -940,9 +940,9 @@ export default function RitmoMainPage() {
                       <button
                         type="button"
                         onClick={handleRequestNotificationPermission}
-                        className="w-full py-2 px-3 rounded-lg bg-white border border-ritmo-purple/40 text-ritmo-purple font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-purple-50 active:scale-[0.98] transition-all"
+                        className="w-full py-2 px-4 rounded-xl bg-white border-2 border-duo-border-light text-duo-charcoal font-extrabold uppercase text-xs flex items-center justify-center gap-2 hover:bg-gray-50 active:translate-y-0.5 transition-all"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-duo-green" />
                         Habilitar Permiso del Sistema
                       </button>
                     )}
@@ -951,16 +951,17 @@ export default function RitmoMainPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[#fff0f1] p-4 border border-[#ff5d63]/20 text-xs">
-              <h3 className="font-bold text-[#ff5d63] flex items-center gap-1.5 mb-1">
-                <BookOpen className="w-4 h-4" /> Filosofía del Sistema Ritmo
+            <div className="rounded-2xl bg-duo-green-light/40 p-4 border-2 border-duo-green text-xs text-duo-charcoal">
+              <h3 className="font-extrabold uppercase tracking-wide text-duo-charcoal flex items-center gap-1.5 mb-1 text-xs">
+                <BookOpen className="w-4 h-4 text-duo-green" /> Filosofía del Sistema Duolingo
               </h3>
-              <p className="text-ritmo-muted leading-relaxed">
-                &quot;El calendario no intenta mostrar todo: intenta hacerte entender tu mes. El color se usa exclusivamente cuando aporta contexto.&quot;
+              <p className="text-duo-gray leading-relaxed font-bold">
+                &quot;El calendario trata cada bloque como un sticker motivacional sobre papel blanco: verde #58cc02 para progreso y metas, azul #1cb0f6 para interactividad, y neutrales tranquilos para una mente enfocada.&quot;
               </p>
             </div>
           </div>
         )}
+
       </main>
 
       {/* Floating Action Button (FAB) */}

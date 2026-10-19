@@ -1,24 +1,17 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, DM_Sans } from 'next/font/google';
+import { Nunito } from 'next/font/google';
 import './globals.css';
 
-const manrope = Manrope({
+const nunito = Nunito({
   subsets: ['latin'],
-  variable: '--font-manrope',
-  weight: ['500', '600', '700', '800'],
-  display: 'swap',
-});
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-dm-sans',
-  weight: ['400', '500', '600', '700'],
+  variable: '--font-nunito',
+  weight: ['400', '500', '600', '700', '800', '900'],
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Ritmo — Calendario & Enfoque',
-  description: 'Sistema monousuario de productividad, calendario táctil y notas inteligentes con Gemini y Telegram.',
+  title: 'Ritmo — Duolingo Edition',
+  description: 'Sistema de enfoque, calendario y notas con estética lúdica sticker Duolingo Eager Green & Spark Blue.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -48,7 +41,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#6558f5',
+  themeColor: '#58cc02',
 };
 
 export default function RootLayout({
@@ -57,9 +50,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${manrope.variable} ${dmSans.variable}`}>
-      <body className="min-h-screen bg-ritmo-bg text-ritmo-ink antialiased selection:bg-ritmo-purple selection:text-white">
-        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-white shadow-2xl relative">
+    <html lang="es" className={nunito.variable}>
+      <body className="min-h-screen bg-white text-duo-charcoal antialiased selection:bg-duo-green-light selection:text-duo-charcoal font-nunito">
+        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-white border-x border-duo-border-light relative">
           {children}
         </main>
       </body>

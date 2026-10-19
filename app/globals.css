@@ -3,29 +3,44 @@
 @tailwind utilities;
 
 :root {
-  --purple: #6558f5;
-  --purple-soft: #eeedff;
-  --red: #ff5d63;
-  --red-soft: #fff0f1;
-  --orange: #f2a641;
-  --orange-soft: #fff5e6;
-  --blue: #4c9af5;
-  --blue-soft: #edf6ff;
-  --green: #46a978;
-  --green-soft: #edf9f3;
-  --yellow: #e7c94a;
-  --yellow-soft: #fffbea;
+  /* Duolingo Color Tokens (DESIGN (3).md) */
+  --color-eager-green: #58cc02;
+  --color-storybook-green: #d7ffb8;
+  --color-spark-blue: #1cb0f6;
+  --color-fresh-leaf: #a5ed6e;
+  --color-night-ink: #000437;
+  --color-paper-white: #ffffff;
+  --color-charcoal: #4b4b4b;
+  --color-pencil-gray: #777777;
+  --color-faded-gray: #afafaf;
 
-  --bg: #f5f6f8;
+  /* Semantic Theme Mappings */
+  --bg: #ffffff;
   --panel: #ffffff;
-  --ink: #151719;
-  --muted: #7b8188;
-  --line: #e9ebef;
-  --soft: #f7f8fa;
+  --ink: #4b4b4b;
+  --muted: #777777;
+  --line: #e5e5e5;
+  --border: #afafaf;
+  --soft: #f7f7f7;
 
-  --radius: 18px;
-  --shadow: 0 18px 50px rgba(28, 31, 36, 0.07);
-  --shadow-soft: 0 8px 22px rgba(28, 31, 36, 0.05);
+  --purple: #58cc02;
+  --purple-soft: #d7ffb8;
+  --red: #ff4b4b;
+  --red-soft: #ffebee;
+  --orange: #ff9600;
+  --orange-soft: #fff4e5;
+  --blue: #1cb0f6;
+  --blue-soft: #ddf4ff;
+  --green: #58cc02;
+  --green-soft: #d7ffb8;
+  --yellow: #ffc800;
+  --yellow-soft: #fff9db;
+
+  /* Duolingo Radii (12px standard, 16px cards) */
+  --radius-buttons: 12px;
+  --radius-cards: 16px;
+  --radius-pills: 9999px;
+  --radius: 12px;
 }
 
 * {
@@ -37,9 +52,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-dm-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-paper-white);
+  color: var(--color-charcoal);
+  font-family: var(--font-nunito), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
@@ -47,10 +63,10 @@ body {
   min-height: 100dvh;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar styled for Duolingo */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -58,12 +74,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d8dbe0;
-  border-radius: 999px;
+  background: #afafaf;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #bec3cb;
+  background: #777777;
 }
 
 /* Touch and Selection Optimization */
@@ -73,8 +89,8 @@ body {
 }
 
 .tap-active:active {
-  transform: scale(0.97);
-  transition: transform 0.1s ease;
+  transform: translateY(2px);
+  transition: transform 0.08s ease;
 }
 
 /* Safe Area Insets for iOS PWA */

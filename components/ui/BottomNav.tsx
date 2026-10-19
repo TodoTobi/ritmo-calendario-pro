@@ -24,8 +24,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-md border-t border-ritmo-line bg-white/95 backdrop-blur-md safe-pb">
-      <div className="flex h-16 items-center justify-around px-2">
+    <div className="fixed bottom-3 left-0 right-0 z-30 mx-auto max-w-md px-4 safe-pb pointer-events-none font-nunito">
+      <nav className="pointer-events-auto flex h-16 items-center justify-around px-2 rounded-2xl bg-white border-2 border-duo-border-light shadow-duo-sticker">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -34,28 +34,30 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
               key={tab.id}
               type="button"
               onClick={() => handleSelect(tab.id)}
-              className={`flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-1 transition-all duration-150 ${
+              className={`flex min-h-[44px] min-w-[60px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 transition-all duration-150 ${
                 isActive
-                  ? 'text-ritmo-purple font-bold'
-                  : 'text-ritmo-muted hover:text-ritmo-ink'
+                  ? 'text-duo-green font-extrabold'
+                  : 'text-duo-gray hover:text-duo-charcoal font-bold'
               }`}
             >
               <div
-                className={`flex h-7 w-12 items-center justify-center rounded-full transition-all duration-200 ${
-                  isActive ? 'bg-ritmo-purple-soft' : 'bg-transparent'
+                className={`flex h-7 w-12 items-center justify-center rounded-xl transition-all duration-150 ${
+                  isActive
+                    ? 'bg-duo-green-light text-duo-green border-2 border-duo-green'
+                    : 'bg-transparent text-duo-gray'
                 }`}
               >
                 <Icon
-                  className={`h-5 w-5 transition-transform ${
-                    isActive ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'
+                  className={`h-4.5 w-4.5 transition-transform ${
+                    isActive ? 'scale-110 stroke-[2.5]' : 'stroke-[2]'
                   }`}
                 />
               </div>
-              <span className="text-[11px] tracking-tight">{tab.label}</span>
+              <span className="text-[11px] tracking-wide uppercase">{tab.label}</span>
             </button>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };
