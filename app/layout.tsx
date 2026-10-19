@@ -1,24 +1,17 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, DM_Sans } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-manrope',
-  weight: ['500', '600', '700', '800'],
-  display: 'swap',
-});
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-dm-sans',
+  variable: '--font-inter',
   weight: ['400', '500', '600', '700'],
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Ritmo — Calendario & Enfoque',
-  description: 'Sistema monousuario de productividad, calendario táctil y notas inteligentes con Gemini y Telegram.',
+  title: 'Ritmo — Family Edition',
+  description: 'Sistema monousuario de productividad, calendario y notas con estética storybook en pergamino crema.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -48,7 +41,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#6558f5',
+  themeColor: '#fbfaf9',
 };
 
 export default function RootLayout({
@@ -57,9 +50,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${manrope.variable} ${dmSans.variable}`}>
-      <body className="min-h-screen bg-ritmo-bg text-ritmo-ink antialiased selection:bg-ritmo-purple selection:text-white">
-        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-white shadow-2xl relative">
+    <html lang="es" className={inter.variable}>
+      <body className="min-h-screen bg-family-cream text-family-charcoal antialiased selection:bg-family-stone selection:text-family-ink font-inter">
+        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-family-cream border-x border-family-stone relative">
           {children}
         </main>
       </body>

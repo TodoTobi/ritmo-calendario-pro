@@ -71,30 +71,30 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl border border-ritmo-line transform transition-all animate-scaleUp"
+        className="w-full max-w-sm rounded-[10px] bg-white p-5 shadow-xl border border-family-stone transform transition-all animate-scaleUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-ritmo-line/80">
+        <div className="flex items-center justify-between pb-3 border-b border-family-stone">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-ritmo-purple-soft flex items-center justify-center text-ritmo-purple">
+            <div className="w-8 h-8 rounded-full bg-family-stone flex items-center justify-center text-family-ink">
               <CalendarIcon className="w-4 h-4" />
             </div>
             <div>
               <h2
                 id="month-year-picker-title"
-                className="font-manrope text-base font-extrabold text-ritmo-ink"
+                className="font-sans text-base font-semibold text-family-ink tracking-tight"
               >
                 Navegar al Mes
               </h2>
-              <p className="text-[11px] text-ritmo-muted">Selecciona mes y año del calendario</p>
+              <p className="text-[11px] text-family-muted">Selecciona mes y año del calendario</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar selector"
-            className="p-1.5 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft transition-colors"
+            className="p-1.5 rounded-full text-family-muted hover:text-family-ink hover:bg-family-stone transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -107,18 +107,18 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
               type="button"
               onClick={() => setSelectedYear((y) => y - 1)}
               aria-label="Año anterior"
-              className="p-1.5 rounded-xl text-ritmo-ink hover:bg-ritmo-soft active:scale-95 transition-all"
+              className="p-1.5 rounded-full text-family-ink hover:bg-family-stone active:scale-95 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="font-manrope text-2xl font-black text-ritmo-ink tracking-tight">
+            <span className="font-sans text-2xl font-semibold text-family-ink tracking-tight">
               {selectedYear}
             </span>
             <button
               type="button"
               onClick={() => setSelectedYear((y) => y + 1)}
               aria-label="Año siguiente"
-              className="p-1.5 rounded-xl text-ritmo-ink hover:bg-ritmo-soft active:scale-95 transition-all"
+              className="p-1.5 rounded-full text-family-ink hover:bg-family-stone active:scale-95 transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -131,10 +131,10 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
                 key={yr}
                 type="button"
                 onClick={() => setSelectedYear(yr)}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
                   selectedYear === yr
-                    ? 'bg-ritmo-purple text-white shadow-xs'
-                    : 'bg-ritmo-soft text-ritmo-muted hover:text-ritmo-ink'
+                    ? 'bg-family-ink text-white'
+                    : 'bg-family-stone text-family-muted hover:text-family-ink'
                 }`}
               >
                 {yr}
@@ -156,18 +156,18 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
                 key={m.short}
                 type="button"
                 onClick={() => handleSelectMonth(idx)}
-                className={`py-3 px-2 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 ${
+                className={`py-2.5 px-2 rounded-[10px] flex flex-col items-center justify-center transition-all active:scale-95 ${
                   isCurrentlySelected
-                    ? 'bg-ritmo-purple text-white shadow-md shadow-ritmo-purple/25 font-bold scale-[1.02]'
+                    ? 'bg-family-ink text-white font-semibold'
                     : isTodayMonth
-                    ? 'bg-ritmo-purple-soft/60 text-ritmo-purple border-2 border-ritmo-purple/40 font-bold'
-                    : 'bg-ritmo-soft/70 text-ritmo-ink hover:bg-ritmo-soft hover:text-ritmo-purple font-semibold'
+                    ? 'bg-family-sand text-family-orange border border-family-orange/40 font-semibold'
+                    : 'bg-family-stone/60 text-family-ink hover:bg-family-stone hover:text-family-ink font-medium shadow-family-inset'
                 }`}
               >
-                <span className="font-manrope text-sm tracking-tight">{m.name}</span>
+                <span className="font-sans text-sm tracking-tight">{m.name}</span>
                 <span
-                  className={`text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
-                    isCurrentlySelected ? 'text-white/80' : 'text-ritmo-muted'
+                  className={`text-[10px] uppercase font-semibold tracking-wider mt-0.5 ${
+                    isCurrentlySelected ? 'text-white/80' : 'text-family-muted'
                   }`}
                 >
                   {m.short}
@@ -178,18 +178,18 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-4 pt-3 border-t border-ritmo-line/80 flex items-center justify-between">
+        <div className="mt-4 pt-3 border-t border-family-stone flex items-center justify-between">
           <button
             type="button"
             onClick={handleJumpToToday}
-            className="text-xs font-bold text-ritmo-purple hover:underline py-1 px-2 rounded-lg"
+            className="text-xs font-semibold text-family-orange hover:underline py-1 px-2 rounded-[6px]"
           >
             Ir al mes actual (Hoy)
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-ritmo-soft text-xs font-bold text-ritmo-ink hover:bg-ritmo-line transition-colors"
+            className="px-4 py-1.5 rounded-full bg-family-stone text-xs font-semibold text-family-ink hover:bg-family-border transition-colors"
           >
             Cerrar
           </button>

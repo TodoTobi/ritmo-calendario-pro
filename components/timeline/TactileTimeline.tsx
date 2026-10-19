@@ -12,7 +12,6 @@ interface TactileTimelineProps {
 
 const TIMELINE_START_HOUR = 7; // 07:00
 const TIMELINE_END_HOUR = 23; // 23:00
-const TOTAL_MINUTES = (TIMELINE_END_HOUR - TIMELINE_START_HOUR) * 60; // 960 minutes
 const HOUR_HEIGHT_PX = 60; // 60px per hour => 1px per minute
 
 export const TactileTimeline: React.FC<TactileTimelineProps> = ({
@@ -243,7 +242,7 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
     }
   }, [pxToMinutes, checkTier1Collision, onUpdateEventTime]);
 
-  // Touch Handlers for Block Card (Long-press allows normal scrolling on quick flick)
+  // Touch Handlers for Block Card
   const handleCardTouchStart = (e: React.TouchEvent, event: CalendarEvent) => {
     if (event.tier === 'tier_1') return;
     const touch = e.touches[0];
@@ -251,13 +250,12 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
     currentPointerYRef.current = touch.clientY;
 
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    // 200ms hold enters drag mode. If user swipes before 200ms, it scrolls naturally!
     longPressTimerRef.current = setTimeout(() => {
       startDragging(event, touch.clientY);
     }, 200);
   };
 
-  // Immediate Drag on Grip Handle (0ms delay for intentional grab)
+  // Immediate Drag on Grip Handle
   const handleGripTouchStart = (e: React.TouchEvent | React.MouseEvent, event: CalendarEvent) => {
     e.stopPropagation();
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -272,20 +270,17 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
       const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
       currentPointerYRef.current = clientY;
 
-      // If user is holding down before 200ms timer fires:
       if (!isDraggingRef.current && touchStartPosRef.current) {
         const deltaDist = Math.hypot(
           clientX - touchStartPosRef.current.x,
           clientY - touchStartPosRef.current.y
         );
-        // If moved more than 8px, user is scrolling! Cancel the drag timer
         if (deltaDist > 8 && longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
         }
       }
 
-      // If already in drag mode, prevent native page bounce and update block
       if (isDraggingRef.current) {
         if (e.cancelable) {
           e.preventDefault();
@@ -314,35 +309,35 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
   }, [updateDragCalculations, stopDragging]);
 
   return (
-    <div className="flex-1 flex flex-col bg-ritmo-bg relative overflow-hidden pb-24 select-none">
+    <div className="flex-1 flex flex-col bg-family-cream relative overflow-hidden pb-24 select-none font-inter">
       {/* Collision Warning Banner */}
       {collisionWarning && (
-        <div className="sticky top-0 z-40 flex items-center gap-2 bg-[#fff0f1] px-4 py-2.5 text-xs font-bold text-[#ff5d63] border-b border-[#ff5d63]/30 shadow-md animate-pulse">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="sticky top-0 z-40 flex items-center gap-2 bg-family-red/10 px-4 py-2.5 text-xs font-medium text-family-red border-b border-family-red/20 shadow-sm animate-pulse">
+          <AlertCircle className="w-4 h-4 shrink-0 text-family-red" />
           <span>{collisionWarning}</span>
         </div>
       )}
 
       {/* Success Notification */}
       {toastMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-ritmo-ink text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl">
-          <CheckCircle2 className="w-4 h-4 text-ritmo-green shrink-0" />
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-family-ink text-white px-4 py-2 rounded-full text-xs font-medium shadow-family-dark">
+          <CheckCircle2 className="w-4 h-4 text-family-green shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Header Info */}
-      <div className="bg-white px-4 py-2.5 border-b border-ritmo-line flex items-center justify-between">
+      <div className="bg-white px-4 py-2.5 border-b border-family-stone flex items-center justify-between">
         <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-ritmo-muted">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-family-muted">
             Línea Táctil Magnética
           </h2>
-          <p className="text-[11px] text-ritmo-ink font-semibold">
+          <p className="text-[11px] text-family-charcoal font-medium">
             Arrastra el tirador o mantén presionado para reordenar
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-bold">
-          <span className="flex items-center gap-1 text-[#ff5d63]">
+        <div className="flex items-center gap-2 text-[10px] font-semibold">
+          <span className="flex items-center gap-1 text-family-red bg-family-red/10 px-2.5 py-0.5 rounded-[6px] border border-family-red/20">
             <Lock className="w-3 h-3" /> Tier 1 Blindado
           </span>
         </div>
@@ -351,7 +346,7 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
       {/* Main Canvas Scroll Area */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto relative px-2 py-3"
+        className="flex-1 overflow-y-auto relative px-2 py-3 bg-family-cream"
         style={{ height: 'calc(100vh - 180px)', touchAction: activeDraggingId ? 'none' : 'pan-y' }}
       >
         <div
@@ -367,10 +362,10 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                 className="absolute left-0 right-0 flex items-center pointer-events-none"
                 style={{ top: `${topPx}px` }}
               >
-                <span className="w-12 text-[11px] font-mono font-bold text-ritmo-muted text-right pr-2">
+                <span className="w-12 text-[11px] font-mono font-medium text-family-muted text-right pr-2">
                   {hour.toString().padStart(2, '0')}:00
                 </span>
-                <div className="flex-1 h-[1px] bg-ritmo-line" />
+                <div className="flex-1 h-[1px] bg-family-stone" />
               </div>
             );
           })}
@@ -384,13 +379,13 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
             return (
               <div
                 key={`t1-bg-${zone.id}`}
-                className="absolute left-14 right-2 rounded-lg bg-[#ff5d63]/5 border-2 border-dashed border-[#ff5d63]/30 pointer-events-none flex items-center justify-end pr-2"
+                className="absolute left-14 right-2 rounded-[10px] bg-family-red/5 border-2 border-dashed border-family-red/20 pointer-events-none flex items-center justify-end pr-2"
                 style={{
                   top: `${startPx}px`,
                   height: `${heightPx}px`,
                 }}
               >
-                <span className="text-[9px] font-bold text-[#ff5d63] uppercase tracking-wider flex items-center gap-1 opacity-70">
+                <span className="text-[9px] font-medium text-family-red uppercase tracking-wider flex items-center gap-1 opacity-80">
                   <Lock className="w-2.5 h-2.5" /> Zona Blindada Tier 1
                 </span>
               </div>
@@ -409,7 +404,7 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
             const currentPreviewTopPx = isDragging ? initialTopPx + dragOffsetY : normalTopPx;
             const heightPx = (durationMin / 60) * HOUR_HEIGHT_PX;
 
-            const colorScheme = EVENT_COLOR_MAP[event.color] || EVENT_COLOR_MAP.orange;
+            const colorScheme = EVENT_COLOR_MAP[event.color] || EVENT_COLOR_MAP.green;
             const isTier1 = event.tier === 'tier_1';
 
             return (
@@ -419,21 +414,22 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                 style={{
                   top: `${baseTopPx}px`,
                   height: `${heightPx - 3}px`,
-                  transform: isDragging ? `translate3d(0, ${dragOffsetY}px, 0) scale(1.03)` : 'translate3d(0, 0, 0)',
+                  transform: isDragging ? `translate3d(0, ${dragOffsetY}px, 0) scale(1.02)` : 'translate3d(0, 0, 0)',
                   willChange: isDragging ? 'transform' : 'auto',
                 }}
-                className={`absolute left-14 right-2 rounded-xl p-2.5 select-none transition-shadow ${
+                className={`absolute left-14 right-2 rounded-[10px] p-2.5 select-none transition-shadow bg-white ${
                   isDragging
-                    ? 'z-30 shadow-2xl ring-2 ring-ritmo-purple ring-offset-2'
+                    ? 'z-30 shadow-family-dark ring-1 ring-family-ink border-family-ink'
                     : isTier1
-                    ? 'z-10 shadow-sm opacity-95'
-                    : 'z-20 shadow-sm hover:shadow-md'
-                } ${colorScheme.bg} border-l-4 ${colorScheme.text} border-t border-r border-b border-ritmo-line/40`}
+                    ? 'z-10 shadow-sm opacity-95 border-l-4 border-family-red'
+                    : 'z-20 shadow-family-inset hover:border-family-stone/80'
+                } border-l-4 ${colorScheme.text} border-t border-r border-b border-family-stone`}
+                style-accent={{ borderLeftColor: colorScheme.accent }}
               >
                 <div className="flex items-start justify-between gap-1.5 h-full">
                   <div className="flex flex-col justify-between h-full min-w-0 flex-1">
                     <div>
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-ritmo-muted">
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-medium text-family-muted">
                         <span>
                           {isDragging
                             ? `${minutesToTimeString(pxToMinutes(currentPreviewTopPx))} – ${minutesToTimeString(
@@ -442,18 +438,18 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                             : `${event.start_time.slice(0, 5)} – ${event.end_time.slice(0, 5)}`}
                         </span>
                         {isTier1 && (
-                          <span className="flex items-center gap-0.5 text-[#ff5d63]">
+                          <span className="flex items-center gap-0.5 text-family-red font-medium">
                             <Lock className="w-2.5 h-2.5" /> Fijo
                           </span>
                         )}
                       </div>
-                      <h4 className="font-bold text-xs text-ritmo-ink truncate mt-0.5">
+                      <h4 className="font-medium text-xs text-family-ink truncate mt-0.5">
                         {event.title}
                       </h4>
                     </div>
 
                     {heightPx > 45 && event.description && (
-                      <p className="text-[10px] text-ritmo-muted line-clamp-1">
+                      <p className="text-[10px] text-family-brown line-clamp-1 font-normal">
                         {event.description}
                       </p>
                     )}
@@ -465,14 +461,14 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                       <div
                         onTouchStart={(e) => handleGripTouchStart(e, event)}
                         onMouseDown={(e) => handleGripTouchStart(e, event)}
-                        className="p-1.5 -mr-1 rounded-lg active:bg-ritmo-muted/20 cursor-grab active:cursor-grabbing text-ritmo-muted hover:text-ritmo-ink transition-colors"
+                        className="p-1.5 -mr-1 rounded-full hover:bg-family-stone/50 active:bg-family-stone cursor-grab active:cursor-grabbing text-family-muted hover:text-family-ink transition-colors"
                         title="Arrastrar para mover horario"
                       >
                         <GripVertical className="w-4 h-4" />
                       </div>
                     ) : (
                       <div className="p-1 -mr-1">
-                        <Lock className="w-3.5 h-3.5 text-ritmo-red/60" />
+                        <Lock className="w-3.5 h-3.5 text-family-red/70" />
                       </div>
                     )}
                   </div>

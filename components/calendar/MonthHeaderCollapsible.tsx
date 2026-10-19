@@ -71,19 +71,13 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
     const absX = Math.abs(diffX);
     const absY = Math.abs(diffY);
 
-    // CRITICAL CONSTRAINT: DO NOT make it overly sensitive!
-    // Threshold: Require at least 75px of horizontal distance (Math.abs(diffX) > 75)
-    // AND enforce horizontal dominance (Math.abs(diffX) > Math.abs(diffY) * 1.6)
-    // so vertical scrolling through the page does NOT trigger an accidental month change.
     if (absX > 75 && absX > absY * 1.6) {
       if (diffX < 0) {
-        // Swipe left -> Next Month
         if (typeof window !== 'undefined' && 'vibrate' in navigator) {
           navigator.vibrate(15);
         }
         onNextMonth?.();
       } else {
-        // Swipe right -> Previous Month
         if (typeof window !== 'undefined' && 'vibrate' in navigator) {
           navigator.vibrate(15);
         }
@@ -94,16 +88,16 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
 
   return (
     <div
-      className="w-full bg-white border-b border-ritmo-line shadow-sm transition-all duration-300 touch-pan-y"
+      className="w-full bg-white border-b border-family-stone transition-all duration-300 touch-pan-y font-inter"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Weekday Labels Header */}
-      <div className="grid grid-cols-7 border-b border-ritmo-line/70 bg-ritmo-soft/60 px-1 py-1.5 text-center">
+      <div className="grid grid-cols-7 border-b border-family-stone bg-family-cream/60 px-1 py-1.5 text-center">
         {weekDayHeaders.map((header) => (
           <span
             key={header}
-            className="text-[10px] font-extrabold text-ritmo-muted uppercase tracking-wider font-manrope"
+            className="text-[10px] font-medium text-family-muted uppercase tracking-wider"
           >
             {header}
           </span>
@@ -112,7 +106,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
 
       {/* Grid of Days — Hero Full-Height View */}
       <div
-        className={`grid grid-cols-7 divide-x divide-y divide-ritmo-line/60 transition-all duration-300 ${
+        className={`grid grid-cols-7 divide-x divide-y divide-family-stone transition-all duration-300 ${
           isExpanded
             ? 'min-h-[calc(100dvh-200px)] md:min-h-[560px]'
             : 'min-h-[70px]'
@@ -132,25 +126,25 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
                 isExpanded ? 'min-h-[72px] sm:min-h-[88px]' : 'min-h-[64px]'
               } ${
                 isSelected
-                  ? 'bg-ritmo-purple/5 ring-2 ring-inset ring-ritmo-purple'
+                  ? 'bg-family-stone/40 ring-1 ring-inset ring-family-charcoal'
                   : isCurrentDay
-                  ? 'bg-[#fbfaff]'
+                  ? 'bg-family-cream/80'
                   : !isCurrentMonthDay
-                  ? 'bg-ritmo-soft/40 opacity-45'
-                  : 'hover:bg-ritmo-soft/80 bg-white'
+                  ? 'bg-family-stone/20 opacity-40'
+                  : 'hover:bg-family-cream/50 bg-white'
               }`}
             >
               {/* Date Header inside Cell */}
               <div className="flex items-center justify-between mb-1">
                 <span
-                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg text-[11px] sm:text-xs font-manrope font-bold flex items-center justify-center transition-transform ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full text-[11px] sm:text-xs font-medium flex items-center justify-center transition-transform ${
                     isSelected
-                      ? 'bg-ritmo-purple text-white shadow-sm font-extrabold scale-105'
+                      ? 'bg-family-ink text-white font-semibold scale-105'
                       : isCurrentDay
-                      ? 'bg-ritmo-ink text-white font-extrabold'
+                      ? 'bg-family-charcoal text-white font-semibold'
                       : isCurrentMonthDay
-                      ? 'text-ritmo-ink'
-                      : 'text-ritmo-muted'
+                      ? 'text-family-charcoal'
+                      : 'text-family-muted'
                   }`}
                 >
                   {format(day, 'd')}
@@ -158,7 +152,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
 
                 {/* Event Count pill if there are many */}
                 {dayEvents.length > 2 && isExpanded && (
-                  <span className="text-[9px] font-bold text-ritmo-muted px-1 rounded-full bg-ritmo-soft hidden sm:inline-block">
+                  <span className="text-[9px] font-medium text-family-muted px-1.5 rounded-full bg-family-stone hidden sm:inline-block">
                     +{dayEvents.length - 2}
                   </span>
                 )}
@@ -168,7 +162,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
               {isExpanded ? (
                 <div className="flex flex-col gap-1 overflow-hidden flex-1">
                   {dayEvents.slice(0, 2).map((ev) => {
-                    const colorScheme = EVENT_COLOR_MAP[ev.color] || EVENT_COLOR_MAP.orange;
+                    const colorScheme = EVENT_COLOR_MAP[ev.color] || EVENT_COLOR_MAP.green;
                     return (
                       <div
                         key={ev.id}
@@ -177,7 +171,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
                           onSelectDate(day);
                           if (onEventClick) onEventClick(ev);
                         }}
-                        className={`group/pill flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-semibold truncate transition-transform hover:scale-[1.02] border border-black/5 ${colorScheme.bg} ${colorScheme.text}`}
+                        className={`group/pill flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[9px] sm:text-[10px] font-medium truncate transition-transform hover:scale-[1.02] border border-family-stone/80 ${colorScheme.bg} text-family-charcoal`}
                         title={`${ev.start_time.slice(0, 5)} ${ev.title}`}
                       >
                         <span
@@ -190,7 +184,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
                   })}
 
                   {dayEvents.length > 2 && (
-                    <span className="text-[8px] font-bold text-ritmo-muted sm:hidden px-0.5">
+                    <span className="text-[8px] font-medium text-family-muted sm:hidden px-0.5">
                       +{dayEvents.length - 2} más
                     </span>
                   )}
@@ -199,7 +193,7 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
                 /* Compact Strip Dots */
                 <div className="flex items-center justify-center gap-1 mt-auto h-2">
                   {dayEvents.slice(0, 3).map((ev) => {
-                    const colorScheme = EVENT_COLOR_MAP[ev.color] || EVENT_COLOR_MAP.orange;
+                    const colorScheme = EVENT_COLOR_MAP[ev.color] || EVENT_COLOR_MAP.green;
                     return (
                       <span
                         key={ev.id}
@@ -216,29 +210,26 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
       </div>
 
       {/* Bottom Bar: Clean Toggle Button */}
-      <div className="flex items-center justify-between px-4 py-2 bg-ritmo-soft/50 border-t border-ritmo-line/60">
+      <div className="flex items-center justify-between px-4 py-2 bg-family-cream border-t border-family-stone">
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="flex items-center gap-1.5 py-1 px-3 text-[11px] font-bold text-ritmo-muted hover:text-ritmo-ink bg-white rounded-full border border-ritmo-line shadow-2xs transition-transform active:scale-95"
+          className="flex items-center gap-1.5 py-1 px-3.5 text-xs font-medium text-family-charcoal hover:bg-family-stone/40 bg-white rounded-full border border-family-stone shadow-sm transition-transform active:scale-95"
         >
           {isExpanded ? (
             <>
               <span>Ver tira semanal</span>
-              <ChevronUp className="w-3.5 h-3.5 text-ritmo-purple" />
+              <ChevronUp className="w-3.5 h-3.5 text-family-charcoal" />
             </>
           ) : (
             <>
               <span>Ver mes completo</span>
-              <ChevronDown className="w-3.5 h-3.5 text-ritmo-purple" />
+              <ChevronDown className="w-3.5 h-3.5 text-family-charcoal" />
             </>
           )}
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline text-[10px] font-medium text-ritmo-muted/70 tracking-wide select-none">
-            ← Desliza para cambiar mes →
-          </span>
           <button
             type="button"
             onClick={() => {
@@ -246,9 +237,9 @@ export const MonthHeaderCollapsible: React.FC<MonthHeaderCollapsibleProps> = ({
               const targetEl = document.getElementById(`day-${dateStr}`) || document.getElementById('agenda-section');
               targetEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className="flex items-center gap-1 py-1 px-3 text-[11px] font-bold text-ritmo-purple hover:text-ritmo-purple/80 bg-ritmo-purple/10 rounded-full transition-transform active:scale-95"
+            className="flex items-center gap-1 py-1 px-3.5 text-xs font-semibold text-white bg-family-ink rounded-full transition-transform active:scale-95 hover:bg-family-charcoal"
           >
-            <span>Ver actividades ({format(selectedDate, 'd MMM')}) ↓</span>
+            <span>Actividades ({format(selectedDate, 'd MMM')}) ↓</span>
           </button>
         </div>
       </div>

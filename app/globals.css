@@ -3,29 +3,57 @@
 @tailwind utilities;
 
 :root {
-  --purple: #6558f5;
-  --purple-soft: #eeedff;
-  --red: #ff5d63;
-  --red-soft: #fff0f1;
-  --orange: #f2a641;
-  --orange-soft: #fff5e6;
-  --blue: #4c9af5;
-  --blue-soft: #edf6ff;
-  --green: #46a978;
-  --green-soft: #edf9f3;
-  --yellow: #e7c94a;
-  --yellow-soft: #fffbea;
+  /* Family Style Reference Tokens (DESIGN (4).md) */
+  --color-cream-canvas: #fbfaf9;
+  --color-stone-surface: #f2f0ed;
+  --color-ink-black: #121212;
+  --color-heading-charcoal: #343433;
+  --color-body-brown: #474645;
+  --color-muted-gray: #7e7e7d;
+  --color-stone-border: #e5d5c3;
+  --color-link-blue: #0086fc;
+  --color-sky-blue: #64c6ff;
+  --color-grass-green: #00c978;
+  --color-mint: #00ca48;
+  --color-ember-orange: #ff3e00;
+  --color-sun-yellow: #ffcd6c;
+  --color-gold: #d48f00;
+  --color-honey: #ffbb26;
+  --color-coral-pink: #ff58ae;
+  --color-plum-violet: #9f4fff;
+  --color-alert-red: #ff2b3a;
 
-  --bg: #f5f6f8;
+  /* Semantic Theme Mappings */
+  --bg: #fbfaf9;
   --panel: #ffffff;
-  --ink: #151719;
-  --muted: #7b8188;
-  --line: #e9ebef;
-  --soft: #f7f8fa;
+  --ink: #121212;
+  --muted: #7e7e7d;
+  --line: #f2f0ed;
+  --soft: #f6f4ef;
 
-  --radius: 18px;
-  --shadow: 0 18px 50px rgba(28, 31, 36, 0.07);
-  --shadow-soft: 0 8px 22px rgba(28, 31, 36, 0.05);
+  --purple: #121212;
+  --purple-soft: #f2f0ed;
+  --red: #ff2b3a;
+  --red-soft: #ffebee;
+  --orange: #ff3e00;
+  --orange-soft: #fff0eb;
+  --blue: #0086fc;
+  --blue-soft: #edf6ff;
+  --green: #00c978;
+  --green-soft: #eefdf4;
+  --yellow: #ffbb26;
+  --yellow-soft: #fff9e8;
+
+  /* Family Radii (10px cards, 32px pill buttons) */
+  --radius: 10px;
+  --radius-cards: 10px;
+  --radius-buttons: 32px;
+  --radius-pills: 9999px;
+  --radius-badges: 6px;
+
+  /* Inset hairline elevation */
+  --shadow-inset: inset 0 0 0 1px #f2f0ed;
+  --shadow-subtle: 0 1px 6px 0 rgba(0, 0, 0, 0.04), 0 0 24px 0 rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -37,9 +65,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-dm-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-cream-canvas);
+  color: var(--color-heading-charcoal);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
@@ -47,7 +76,7 @@ body {
   min-height: 100dvh;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar styled for Family parchment */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -58,12 +87,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d8dbe0;
-  border-radius: 999px;
+  background: #e5d5c3;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #bec3cb;
+  background: #d8c3ad;
 }
 
 /* Touch and Selection Optimization */
@@ -73,7 +102,7 @@ body {
 }
 
 .tap-active:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
   transition: transform 0.1s ease;
 }
 
