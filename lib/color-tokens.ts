@@ -10,46 +10,46 @@ export interface ColorScheme {
 
 export const EVENT_COLOR_MAP: Record<EventColor, ColorScheme> = {
   purple: {
-    bg: 'bg-[#eeedff]',
-    border: 'border-[#6558f5]',
-    text: 'text-[#6558f5]',
-    accent: '#6558f5',
-    lightBg: '#eeedff',
+    bg: 'bg-[#524ae9]/10',
+    border: 'border-[#524ae9]',
+    text: 'text-[#524ae9]',
+    accent: '#524ae9', // Plasma Violet
+    lightBg: 'bg-[#524ae9]/10',
   },
   red: {
-    bg: 'bg-[#fff0f1]',
-    border: 'border-[#ff5d63]',
-    text: 'text-[#ff5d63]',
-    accent: '#ff5d63',
-    lightBg: '#fff0f1',
+    bg: 'bg-[#fc5000]/15',
+    border: 'border-[#fc5000]',
+    text: 'text-[#fc5000]',
+    accent: '#fc5000', // Ember
+    lightBg: 'bg-[#fc5000]/15',
   },
   orange: {
-    bg: 'bg-[#fff5e6]',
-    border: 'border-[#f2a641]',
-    text: 'text-[#f2a641]',
-    accent: '#f2a641',
-    lightBg: '#fff5e6',
+    bg: 'bg-[#fc5000]/10',
+    border: 'border-[#fc5000]',
+    text: 'text-[#d44300]',
+    accent: '#fc5000', // Ember
+    lightBg: 'bg-[#fc5000]/10',
   },
   blue: {
-    bg: 'bg-[#edf6ff]',
-    border: 'border-[#4c9af5]',
-    text: 'text-[#4c9af5]',
-    accent: '#4c9af5',
-    lightBg: '#edf6ff',
+    bg: 'bg-[#524ae9]/10',
+    border: 'border-[#524ae9]',
+    text: 'text-[#524ae9]',
+    accent: '#524ae9', // Plasma Violet
+    lightBg: 'bg-[#524ae9]/10',
   },
   green: {
-    bg: 'bg-[#edf9f3]',
-    border: 'border-[#46a978]',
-    text: 'text-[#46a978]',
-    accent: '#46a978',
-    lightBg: '#edf9f3',
+    bg: 'bg-[#2f855a]/10',
+    border: 'border-[#2f855a]',
+    text: 'text-[#236846]',
+    accent: '#2f855a',
+    lightBg: 'bg-[#2f855a]/10',
   },
   yellow: {
-    bg: 'bg-[#fffbea]',
-    border: 'border-[#e7c94a]',
-    text: 'text-[#9a8413]',
-    accent: '#e7c94a',
-    lightBg: '#fffbea',
+    bg: 'bg-[#f5f28e]',
+    border: 'border-[#d4d168]',
+    text: 'text-[#070607]',
+    accent: '#070607', // Sulfur with Obsidian text
+    lightBg: 'bg-[#f5f28e]',
   },
 };
 

@@ -61,34 +61,34 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
   }, [events, selectedDateStr, daysCount]);
 
   return (
-    <div className="w-full px-4 py-4 space-y-5 pb-36">
-      {/* Classroom Tasks without Due Date Collapsible Card */}
+    <div className="w-full px-4 py-4 space-y-6 pb-36 bg-caldera-limestone">
+      {/* Classroom Tasks Card — Caldera Plasma Accent Surface */}
       {classroomNoDueTasks && classroomNoDueTasks.length > 0 && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3.5 space-y-2.5 shadow-2xs">
+        <div className="rounded-[32px] border border-caldera-obsidian/20 bg-caldera-pumice/70 p-4 space-y-3">
           <button
             type="button"
             onClick={() => setShowNoDue(!showNoDue)}
             className="w-full flex items-center justify-between text-left"
           >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-caldera-plasma flex items-center justify-center text-caldera-chalk">
                 <BookOpen className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-black text-blue-950">
+                <p className="font-display text-sm uppercase tracking-wider text-caldera-obsidian">
                   Tareas de Classroom sin fecha límite ({classroomNoDueTasks.length})
                 </p>
-                <p className="text-[11px] font-medium text-blue-700/80">
-                  Actividades asignadas de tus cursos activos 2026
+                <p className="text-[11px] font-medium text-caldera-muted">
+                  Actividades asignadas de cursos 2026
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-caldera-sulfur text-caldera-obsidian border border-caldera-obsidian/20">
                 {showNoDue ? 'Ocultar' : 'Ver todas'}
               </span>
               <ChevronDown
-                className={`w-4 h-4 text-blue-700 transition-transform ${
+                className={`w-4 h-4 text-caldera-obsidian transition-transform ${
                   showNoDue ? 'rotate-180' : ''
                 }`}
               />
@@ -96,14 +96,14 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
           </button>
 
           {showNoDue && (
-            <div className="space-y-2 pt-2 border-t border-blue-200/80 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-2 pt-2 border-t border-dotted border-caldera-obsidian/25 max-h-72 overflow-y-auto pr-1">
               {classroomNoDueTasks.map((task) => (
                 <div
                   key={task.id || task.coursework_id}
-                  className="p-3 rounded-xl bg-white border border-blue-100 shadow-2xs space-y-1.5"
+                  className="p-3 rounded-[20px] bg-caldera-limestone border border-caldera-obsidian/15 space-y-1.5"
                 >
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                    <span className="font-bold uppercase tracking-wider text-caldera-plasma bg-caldera-plasma/10 px-2 py-0.5 rounded-full">
                       {task.course_name}
                     </span>
                     {task.alternate_link && (
@@ -111,15 +111,17 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
                         href={task.alternate_link}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-bold text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                        className="font-bold text-caldera-ember hover:underline inline-flex items-center gap-0.5"
                       >
                         Abrir <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     )}
                   </div>
-                  <p className="text-xs font-bold text-ritmo-ink leading-tight">{task.title}</p>
+                  <p className="font-display text-sm uppercase tracking-wide text-caldera-obsidian leading-tight">
+                    {task.title}
+                  </p>
                   {task.description && (
-                    <p className="text-[11px] text-ritmo-muted line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-caldera-muted line-clamp-2 leading-relaxed">
                       {task.description}
                     </p>
                   )}
@@ -130,7 +132,7 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
         </div>
       )}
 
-      {groupedEvents.map(([dateStr, dayEvents], index) => {
+      {groupedEvents.map(([dateStr, dayEvents]) => {
         const { label, dateNum, isCurrentDay } = formatDayHeader(dateStr);
         const isSelected = dateStr === selectedDateStr;
 
@@ -138,31 +140,31 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
           <section
             key={dateStr}
             id={`day-${dateStr}`}
-            className={`space-y-2.5 transition-all rounded-2xl ${
+            className={`space-y-3 transition-all rounded-[32px] ${
               isSelected
-                ? 'ring-2 ring-ritmo-purple/30 p-3 bg-ritmo-purple/5 border border-ritmo-purple/20'
+                ? 'p-3.5 bg-caldera-pumice/50 border border-caldera-obsidian/30'
                 : 'p-1'
             }`}
           >
             {/* Clear Day Section Header */}
-            <div className="flex items-center justify-between border-b border-ritmo-line/70 pb-1.5 pt-0.5">
+            <div className="flex items-center justify-between border-b border-dotted border-caldera-obsidian/25 pb-1.5 pt-0.5">
               <div className="flex items-center gap-2">
                 <span
-                  className={`text-xs font-black tracking-widest uppercase ${
+                  className={`font-display text-base tracking-wider uppercase ${
                     isCurrentDay
-                      ? 'text-ritmo-purple'
+                      ? 'text-caldera-ember font-bold'
                       : isSelected
-                      ? 'text-ritmo-ink font-extrabold'
-                      : 'text-ritmo-muted'
+                      ? 'text-caldera-obsidian font-bold'
+                      : 'text-caldera-muted'
                   }`}
                 >
                   {label}
                 </span>
-                <span className="text-xs font-bold text-ritmo-muted">
+                <span className="text-xs font-bold text-caldera-muted">
                   {dateNum}
                 </span>
                 {isSelected && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-ritmo-purple text-white ml-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-caldera-sulfur text-caldera-obsidian border border-caldera-obsidian/20 ml-1">
                     Seleccionado
                   </span>
                 )}
@@ -172,27 +174,27 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
                 type="button"
                 onClick={() => onAddEventForDate(dateStr)}
                 aria-label={`Añadir evento para ${dateStr}`}
-                className="flex items-center gap-1 text-[11px] font-bold text-ritmo-purple hover:text-ritmo-purple/80 transition-colors px-2 py-1 rounded-lg hover:bg-ritmo-purple/10"
+                className="flex items-center gap-1 text-[11px] font-bold text-caldera-obsidian hover:text-caldera-ember transition-colors px-2.5 py-1 rounded-full border border-caldera-obsidian/25 hover:border-caldera-ember bg-caldera-limestone"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 text-caldera-ember" />
                 <span>Agregar</span>
               </button>
             </div>
 
             {/* List of Events or Empty State */}
             {dayEvents.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-ritmo-line bg-white/60 p-3.5 text-center">
-                <p className="text-xs font-medium text-ritmo-muted">Sin compromisos programados</p>
+              <div className="rounded-[24px] border border-dotted border-caldera-obsidian/30 bg-caldera-pumice/20 p-4 text-center">
+                <p className="text-xs font-medium text-caldera-muted">Sin compromisos programados</p>
                 <button
                   type="button"
                   onClick={() => onAddEventForDate(dateStr)}
-                  className="mt-1 text-xs font-bold text-ritmo-purple hover:underline"
+                  className="mt-1 text-xs font-bold text-caldera-ember hover:underline"
                 >
                   + Programar actividad
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {dayEvents.map((event) => (
                   <EventPill
                     key={event.id}
@@ -212,16 +214,16 @@ export const AgendaFeed: React.FC<AgendaFeedProps> = ({
           <button
             type="button"
             onClick={() => setDaysCount(14)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-ritmo-line bg-white text-xs font-bold text-ritmo-ink shadow-sm hover:bg-ritmo-soft transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full border border-caldera-obsidian bg-transparent text-xs font-bold text-caldera-obsidian hover:bg-caldera-pumice transition-all active:scale-95"
           >
             <span>Ver 7 días más en la agenda</span>
-            <ChevronDown className="w-3.5 h-3.5 text-ritmo-muted" />
+            <ChevronDown className="w-3.5 h-3.5 text-caldera-obsidian" />
           </button>
         ) : (
           <button
             type="button"
             onClick={() => setDaysCount(7)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-ritmo-line bg-white text-xs font-bold text-ritmo-muted shadow-sm hover:bg-ritmo-soft transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full border border-caldera-obsidian bg-transparent text-xs font-bold text-caldera-obsidian hover:bg-caldera-pumice transition-all active:scale-95"
           >
             <span>Volver a vista de 7 días</span>
           </button>

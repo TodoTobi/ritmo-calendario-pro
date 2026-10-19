@@ -637,7 +637,7 @@ export default function RitmoMainPage() {
   const currentMonthFormatted = formatDateSafe(currentDate, 'MMMM yyyy');
 
   return (
-    <div className="flex flex-col h-screen w-full bg-ritmo-bg overflow-hidden text-ritmo-ink">
+    <div className="flex flex-col h-screen w-full bg-caldera-limestone overflow-hidden text-caldera-obsidian">
       {/* Top Header */}
       <TopHeader
         currentDateText={currentMonthFormatted}
@@ -651,7 +651,7 @@ export default function RitmoMainPage() {
       />
 
       {/* Main Content Area based on Active Bottom Tab */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 flex flex-col overflow-hidden relative bg-caldera-limestone">
         {activeTab === 'calendar' && (
           <div className="flex-1 overflow-y-auto pb-24 scroll-smooth">
             {/* Full-Screen Hero Month View with swipe navigation */}
@@ -665,14 +665,14 @@ export default function RitmoMainPage() {
             />
 
             {/* Continuous Vertical Feed of Days and Events */}
-            <div id="agenda-section" className="border-t border-ritmo-line/80 bg-white">
-              <div className="px-4 py-2.5 bg-ritmo-soft/80 flex items-center justify-between border-b border-ritmo-line sticky top-0 z-10 backdrop-blur-md">
+            <div id="agenda-section" className="border-t border-dotted border-caldera-obsidian/25 bg-caldera-limestone">
+              <div className="px-4 py-2.5 bg-caldera-pumice/80 flex items-center justify-between border-b border-dotted border-caldera-obsidian/20 sticky top-0 z-10 backdrop-blur-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-ritmo-purple font-manrope">
+                  <span className="text-[12px] font-display uppercase tracking-wider text-caldera-obsidian">
                     Actividades: {formatDateSafe(selectedDate, "EEEE d 'de' MMMM")}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-ritmo-purple/10 text-ritmo-purple">
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-caldera-sulfur text-caldera-obsidian border border-caldera-obsidian/20">
                   {displayedEvents.filter((e) => e.event_date === selectedDateStr).length} actividades
                 </span>
               </div>
@@ -709,22 +709,22 @@ export default function RitmoMainPage() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
-            <div className="rounded-2xl bg-white p-5 shadow-sm border border-ritmo-line space-y-4">
-              <h2 className="font-manrope text-base font-extrabold text-ritmo-ink flex items-center gap-2">
-                <Settings className="w-5 h-5 text-ritmo-purple" />
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-28 bg-caldera-pumice/30">
+            <div className="rounded-[32px] bg-caldera-limestone p-5 border border-caldera-obsidian/20 space-y-4">
+              <h2 className="font-display text-base uppercase tracking-wider text-caldera-obsidian flex items-center gap-2">
+                <Settings className="w-5 h-5 text-caldera-ember" />
                 Configuración del Asistente Ritmo
               </h2>
 
               <div className="space-y-3 text-xs">
                 {/* Database Sync Card */}
-                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-2.5">
+                <div className="p-4 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Database className="w-4 h-4 text-ritmo-purple" />
+                      <Database className="w-4 h-4 text-caldera-ember" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Base de Datos Supabase</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-bold text-caldera-obsidian">Base de Datos Supabase</p>
+                        <p className="text-[11px] text-caldera-muted">
                           {dbStatus === 'connected' && 'Sincronizado con tablas remotas'}
                           {dbStatus === 'empty' && 'Tablas vacías (listo para sembrar)'}
                           {dbStatus === 'missing_tables' && 'Tablas pendientes de crear en SQL'}
@@ -733,12 +733,12 @@ export default function RitmoMainPage() {
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                         dbStatus === 'connected'
-                          ? 'bg-green-50 text-ritmo-green border-green-200'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           : dbStatus === 'missing_tables'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-blue-50 text-ritmo-blue border-blue-200'
+                          ? 'bg-caldera-sulfur text-caldera-obsidian border-caldera-obsidian/20'
+                          : 'bg-caldera-plasma/15 text-caldera-plasma border-caldera-plasma/30'
                       }`}
                     >
                       {dbStatus === 'connected' ? 'En Línea' : dbStatus === 'missing_tables' ? 'Falta SQL' : 'Conectando'}
@@ -746,9 +746,9 @@ export default function RitmoMainPage() {
                   </div>
 
                   {dbStatus === 'missing_tables' && (
-                    <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1">
+                    <div className="p-3 rounded-[16px] bg-caldera-sulfur/50 border border-caldera-obsidian/20 text-[11px] text-caldera-obsidian space-y-1">
                       <div className="flex items-center gap-1 font-bold">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-caldera-ember" />
                         Paso pendiente en Supabase Dashboard:
                       </div>
                       <p>
@@ -758,7 +758,7 @@ export default function RitmoMainPage() {
                         href="https://supabase.com/dashboard/project/fvqwfrjpoadvvbskgddz/sql/new"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-bold text-ritmo-purple underline text-[10px] pt-1"
+                        className="inline-flex items-center gap-1 font-bold text-caldera-ember underline text-[10px] pt-1"
                       >
                         Abrir SQL Editor en Supabase <ExternalLink className="w-2.5 h-2.5" />
                       </a>
@@ -768,72 +768,72 @@ export default function RitmoMainPage() {
                   <button
                     onClick={handlePushRealDataToSupabase}
                     disabled={isSyncingDb}
-                    className="w-full py-2 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all disabled:opacity-50"
+                    className="w-full py-2.5 px-4 rounded-full bg-caldera-ember text-caldera-obsidian font-bold text-xs flex items-center justify-center gap-2 border border-caldera-obsidian/20 hover:bg-caldera-ember-hover active:scale-[0.98] transition-all disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDb ? 'animate-spin' : ''}`} />
                     {isSyncingDb ? 'Sincronizando...' : '🌱 Cargar Datos Reales a Supabase'}
                   </button>
 
                   {syncFeedback && (
-                    <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded border border-purple-100">
+                    <p className="text-[11px] font-bold text-caldera-obsidian bg-caldera-sulfur p-2 rounded-full border border-caldera-obsidian/20 text-center">
                       {syncFeedback}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
+                <div className="flex items-center justify-between p-3.5 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-ritmo-green" />
+                    <ShieldCheck className="w-4 h-4 text-emerald-700" />
                     <div>
-                      <p className="font-bold text-ritmo-ink">Modo Monousuario Soberano</p>
-                      <p className="text-ritmo-muted">Propietario (GMT-3 Buenos Aires)</p>
+                      <p className="font-bold text-caldera-obsidian">Modo Monousuario Soberano</p>
+                      <p className="text-caldera-muted">Propietario (GMT-3 Buenos Aires)</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-green px-2 py-0.5 rounded-full bg-green-50 border border-green-200">
+                  <span className="text-[10px] font-bold text-emerald-800 px-2.5 py-0.5 rounded-full bg-emerald-100 border border-emerald-300">
                     Activo
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
+                <div className="flex items-center justify-between p-3.5 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15">
                   <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-ritmo-purple" />
+                    <Bot className="w-4 h-4 text-caldera-ember" />
                     <div>
-                      <p className="font-bold text-ritmo-ink">Google Gemini 2.0 Flash</p>
-                      <p className="text-ritmo-muted">Audio OGG/Opus & Visión Multimodal</p>
+                      <p className="font-bold text-caldera-obsidian">Google Gemini 2.0 Flash</p>
+                      <p className="text-caldera-muted">Audio OGG/Opus & Visión Multimodal</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-purple px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200">
+                  <span className="text-[10px] font-bold text-caldera-obsidian px-2.5 py-0.5 rounded-full bg-caldera-sulfur border border-caldera-obsidian/20">
                     Conectado
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-ritmo-soft">
+                <div className="flex items-center justify-between p-3.5 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="w-4 h-4 text-ritmo-blue" />
+                    <Smartphone className="w-4 h-4 text-caldera-plasma" />
                     <div>
-                      <p className="font-bold text-ritmo-ink">Telegram Bot Webhook</p>
-                      <p className="text-ritmo-muted">@ritmo_lucas_bot</p>
+                      <p className="font-bold text-caldera-obsidian">Telegram Bot Webhook</p>
+                      <p className="text-caldera-muted">@ritmo_lucas_bot</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-ritmo-blue px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                  <span className="text-[10px] font-bold text-caldera-plasma px-2.5 py-0.5 rounded-full bg-caldera-plasma/15 border border-caldera-plasma/30">
                     Listo
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-ritmo-soft border border-ritmo-line/50 space-y-2">
+                <div className="p-3.5 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-ritmo-blue" />
+                      <BookOpen className="w-4 h-4 text-caldera-plasma" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Google Classroom (tv286206@gmail.com)</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-bold text-caldera-obsidian">Google Classroom (tv286206@gmail.com)</p>
+                        <p className="text-[11px] text-caldera-muted">
                           {classroomCount > 0
                             ? `${classroomCount} tareas y entregas sincronizadas`
                             : '27 cursos activos vinculados'}
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-ritmo-blue px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200">
+                    <span className="text-[10px] font-bold text-caldera-plasma px-2.5 py-0.5 rounded-full bg-caldera-plasma/15 border border-caldera-plasma/30">
                       Conectado
                     </span>
                   </div>
@@ -841,27 +841,27 @@ export default function RitmoMainPage() {
                   <button
                     onClick={handleSyncClassroom}
                     disabled={isSyncingClassroom}
-                    className="w-full py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="w-full py-2 px-4 rounded-full bg-caldera-plasma hover:opacity-90 text-caldera-chalk font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingClassroom ? 'animate-spin' : ''}`} />
                     {isSyncingClassroom ? 'Sincronizando Classroom...' : '🔄 Sincronizar Classroom Ahora'}
                   </button>
 
                   {classroomFeedback && (
-                    <p className="text-[11px] font-medium text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
+                    <p className="text-[11px] font-bold text-caldera-obsidian bg-caldera-sulfur p-2 rounded-full border border-caldera-obsidian/20 text-center">
                       {classroomFeedback}
                     </p>
                   )}
                 </div>
 
                 {/* Google Drive & NotebookLM Source Feed */}
-                <div className="p-3 rounded-xl bg-ritmo-soft border border-ritmo-line/50 space-y-2">
+                <div className="p-3.5 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Cloud className="w-4 h-4 text-ritmo-purple" />
+                      <Cloud className="w-4 h-4 text-caldera-ember" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Google NotebookLM & Drive</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-bold text-caldera-obsidian">Google NotebookLM & Drive</p>
+                        <p className="text-[11px] text-caldera-muted">
                           Carpeta viva: &quot;Ritmo - UTN Apuntes&quot;
                         </p>
                       </div>
@@ -870,7 +870,7 @@ export default function RitmoMainPage() {
                       href="https://notebooklm.google.com/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] font-bold text-ritmo-purple px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 hover:bg-purple-100 flex items-center gap-1 transition-colors"
+                      className="text-[10px] font-bold text-caldera-obsidian px-2.5 py-0.5 rounded-full bg-caldera-sulfur border border-caldera-obsidian/20 hover:bg-caldera-sulfur/80 flex items-center gap-1 transition-colors"
                     >
                       <span>Abrir</span>
                       <ExternalLink className="w-2.5 h-2.5" />
@@ -880,27 +880,27 @@ export default function RitmoMainPage() {
                   <button
                     onClick={handleSyncDrive}
                     disabled={isSyncingDrive}
-                    className="w-full py-1.5 px-3 rounded-lg bg-ritmo-purple hover:bg-ritmo-purple/90 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="w-full py-2 px-4 rounded-full bg-caldera-ember hover:bg-caldera-ember-hover text-caldera-obsidian font-bold text-xs flex items-center justify-center gap-2 border border-caldera-obsidian/20 transition-all active:scale-[0.98] disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDrive ? 'animate-spin' : ''}`} />
                     {isSyncingDrive ? 'Sincronizando con Drive...' : '☁️ Sincronizar Apuntes con Drive'}
                   </button>
 
                   {driveFeedback && (
-                    <p className="text-[11px] font-medium text-ritmo-purple bg-purple-50 p-2 rounded border border-purple-200">
+                    <p className="text-[11px] font-bold text-caldera-obsidian bg-caldera-sulfur p-2 rounded-full border border-caldera-obsidian/20 text-center">
                       {driveFeedback}
                     </p>
                   )}
                 </div>
 
                 {/* Mobile / Device Push Notifications */}
-                <div className="p-3.5 rounded-xl bg-ritmo-soft border border-ritmo-line/60 space-y-3">
+                <div className="p-3.5 rounded-[24px] bg-caldera-pumice/50 border border-caldera-obsidian/15 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-ritmo-purple" />
+                      <Bell className="w-4 h-4 text-caldera-ember" />
                       <div>
-                        <p className="font-bold text-ritmo-ink">Notificaciones en este Dispositivo</p>
-                        <p className="text-[11px] text-ritmo-muted">
+                        <p className="font-bold text-caldera-obsidian">Notificaciones en este Dispositivo</p>
+                        <p className="text-[11px] text-caldera-muted">
                           {notificationPermission === 'granted'
                             ? 'Alertas activas para entregas y eventos'
                             : notificationPermission === 'denied'
@@ -910,12 +910,12 @@ export default function RitmoMainPage() {
                       </div>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                         notificationPermission === 'granted'
-                          ? 'bg-green-50 text-ritmo-green border-green-200'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           : notificationPermission === 'denied'
-                          ? 'bg-red-50 text-ritmo-red border-red-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                          ? 'bg-caldera-ember text-caldera-obsidian border-caldera-obsidian/30'
+                          : 'bg-caldera-sulfur text-caldera-obsidian border-caldera-obsidian/20'
                       }`}
                     >
                       {notificationPermission === 'granted'
@@ -930,9 +930,9 @@ export default function RitmoMainPage() {
                     <button
                       type="button"
                       onClick={handleTestDeviceNotification}
-                      className="w-full py-2.5 px-3 rounded-lg bg-ritmo-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:bg-ritmo-purple/90 active:scale-[0.98] transition-all"
+                      className="w-full py-2.5 px-4 rounded-full bg-caldera-obsidian text-caldera-chalk font-bold text-xs flex items-center justify-center gap-2 hover:bg-caldera-obsidian/90 active:scale-[0.98] transition-all"
                     >
-                      <Bell className="w-4 h-4" />
+                      <Bell className="w-4 h-4 text-caldera-ember" />
                       🔔 Probar Notificación en este Dispositivo
                     </button>
 
@@ -940,9 +940,9 @@ export default function RitmoMainPage() {
                       <button
                         type="button"
                         onClick={handleRequestNotificationPermission}
-                        className="w-full py-2 px-3 rounded-lg bg-white border border-ritmo-purple/40 text-ritmo-purple font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:bg-purple-50 active:scale-[0.98] transition-all"
+                        className="w-full py-2 px-4 rounded-full bg-caldera-limestone border border-caldera-obsidian/30 text-caldera-obsidian font-bold text-xs flex items-center justify-center gap-2 hover:bg-caldera-pumice active:scale-[0.98] transition-all"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                         Habilitar Permiso del Sistema
                       </button>
                     )}
@@ -951,16 +951,17 @@ export default function RitmoMainPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[#fff0f1] p-4 border border-[#ff5d63]/20 text-xs">
-              <h3 className="font-bold text-[#ff5d63] flex items-center gap-1.5 mb-1">
-                <BookOpen className="w-4 h-4" /> Filosofía del Sistema Ritmo
+            <div className="rounded-[28px] bg-caldera-ember/15 p-4 border border-caldera-ember/30 text-xs text-caldera-obsidian">
+              <h3 className="font-display uppercase tracking-wider text-caldera-obsidian flex items-center gap-1.5 mb-1 text-sm">
+                <BookOpen className="w-4 h-4 text-caldera-ember" /> Filosofía del Sistema Caldera
               </h3>
-              <p className="text-ritmo-muted leading-relaxed">
+              <p className="text-caldera-muted leading-relaxed font-medium">
                 &quot;El calendario no intenta mostrar todo: intenta hacerte entender tu mes. El color se usa exclusivamente cuando aporta contexto.&quot;
               </p>
             </div>
           </div>
         )}
+
       </main>
 
       {/* Floating Action Button (FAB) */}

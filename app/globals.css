@@ -3,29 +3,45 @@
 @tailwind utilities;
 
 :root {
-  --purple: #6558f5;
-  --purple-soft: #eeedff;
-  --red: #ff5d63;
-  --red-soft: #fff0f1;
-  --orange: #f2a641;
-  --orange-soft: #fff5e6;
-  --blue: #4c9af5;
-  --blue-soft: #edf6ff;
-  --green: #46a978;
+  /* Caldera Color Tokens */
+  --color-ember: #fc5000;
+  --color-plasma-violet: #524ae9;
+  --color-sulfur: #f5f28e;
+  --color-limestone: #f7f6f2;
+  --color-pumice: #e2e2df;
+  --color-obsidian: #070607;
+  --color-chalk: #ffffff;
+
+  /* Semantic Theme Mappings */
+  --bg: #e2e2df;
+  --panel: #f7f6f2;
+  --ink: #070607;
+  --muted: #6e6d69;
+  --line: #d5d4cf;
+  --soft: #ecebe7;
+
+  --purple: #fc5000;
+  --purple-soft: #fff1eb;
+  --red: #fc5000;
+  --red-soft: #ffebe5;
+  --orange: #fc5000;
+  --orange-soft: #fff2ec;
+  --blue: #524ae9;
+  --blue-soft: #f0effe;
+  --green: #2f855a;
   --green-soft: #edf9f3;
-  --yellow: #e7c94a;
-  --yellow-soft: #fffbea;
+  --yellow: #f5f28e;
+  --yellow-soft: #fefee6;
 
-  --bg: #f5f6f8;
-  --panel: #ffffff;
-  --ink: #151719;
-  --muted: #7b8188;
-  --line: #e9ebef;
-  --soft: #f7f8fa;
+  /* Caldera Radii */
+  --radius-cards: 40px;
+  --radius-pills: 800px;
+  --radius-inputs: 100px;
+  --radius: 40px;
 
-  --radius: 18px;
-  --shadow: 0 18px 50px rgba(28, 31, 36, 0.07);
-  --shadow-soft: 0 8px 22px rgba(28, 31, 36, 0.05);
+  /* Completely Flat — No drop shadows */
+  --shadow: none;
+  --shadow-soft: none;
 }
 
 * {
@@ -37,9 +53,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-dm-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-pumice);
+  color: var(--color-obsidian);
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
@@ -47,7 +64,37 @@ body {
   min-height: 100dvh;
 }
 
-/* Custom Scrollbar */
+/* Force flat design everywhere for Caldera */
+*, *::before, *::after {
+  box-shadow: none !important;
+}
+
+/* Caldera Halftone Dot Patterns */
+.bg-halftone-plasma {
+  background-color: #524ae9;
+  background-image: radial-gradient(#fc5000 1.5px, transparent 1.5px);
+  background-size: 8px 8px;
+}
+
+.bg-halftone-ember {
+  background-color: #fc5000;
+  background-image: radial-gradient(#070607 1.5px, transparent 1.5px);
+  background-size: 8px 8px;
+}
+
+.bg-halftone-limestone {
+  background-color: #f7f6f2;
+  background-image: radial-gradient(#d5d4cf 1.5px, transparent 1.5px);
+  background-size: 10px 10px;
+}
+
+/* Caldera Dotted Dividers (1.5px dotted Obsidian) */
+.border-dotted-obsidian {
+  border-style: dotted !important;
+  border-color: rgba(7, 6, 7, 0.35) !important;
+}
+
+/* Custom Scrollbar styled for Caldera */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -58,12 +105,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d8dbe0;
-  border-radius: 999px;
+  background: #c2c1bb;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #bec3cb;
+  background: #a9a8a1;
 }
 
 /* Touch and Selection Optimization */
@@ -73,7 +120,7 @@ body {
 }
 
 .tap-active:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
   transition: transform 0.1s ease;
 }
 

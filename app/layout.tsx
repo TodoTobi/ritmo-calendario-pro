@@ -1,24 +1,24 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, DM_Sans } from 'next/font/google';
+import { Bebas_Neue, DM_Sans } from 'next/font/google';
 import './globals.css';
 
-const manrope = Manrope({
+const bebasNeue = Bebas_Neue({
   subsets: ['latin'],
-  variable: '--font-manrope',
-  weight: ['500', '600', '700', '800'],
+  variable: '--font-bebas-neue',
+  weight: '400',
   display: 'swap',
 });
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
   variable: '--font-dm-sans',
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Ritmo — Calendario & Enfoque',
-  description: 'Sistema monousuario de productividad, calendario táctil y notas inteligentes con Gemini y Telegram.',
+  title: 'Ritmo — Caldera Edition',
+  description: 'Sistema de enfoque, calendario y notas personales con estética industrial volcánica Caldera.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -48,7 +48,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#6558f5',
+  themeColor: '#fc5000',
 };
 
 export default function RootLayout({
@@ -57,9 +57,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${manrope.variable} ${dmSans.variable}`}>
-      <body className="min-h-screen bg-ritmo-bg text-ritmo-ink antialiased selection:bg-ritmo-purple selection:text-white">
-        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-white shadow-2xl relative">
+    <html lang="es" className={`${bebasNeue.variable} ${dmSans.variable}`}>
+      <body className="min-h-screen bg-caldera-pumice text-caldera-obsidian antialiased selection:bg-caldera-ember selection:text-caldera-obsidian">
+        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-caldera-limestone border-x border-caldera-obsidian/10 relative">
           {children}
         </main>
       </body>

@@ -22,12 +22,9 @@ export const FAB: React.FC<FABProps> = ({
       type="button"
       onClick={handleClick}
       aria-label={ariaLabel}
-      className="fixed bottom-20 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-ritmo-purple text-white shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-ritmo-purple/30"
-      style={{
-        boxShadow: '0 8px 24px rgba(101, 88, 245, 0.45)',
-      }}
+      className="fixed bottom-20 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-caldera-ember text-caldera-obsidian border-2 border-caldera-obsidian transition-transform duration-150 hover:scale-105 active:scale-95 focus:outline-none"
     >
-      <Plus className="h-7 w-7 stroke-[2.5]" />
+      <Plus className="h-7 w-7 stroke-[3]" />
     </button>
   );
 };

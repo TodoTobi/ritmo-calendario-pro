@@ -34,17 +34,23 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-      <div className="w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-white p-5 shadow-2xl safe-pb animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
+      <div className="w-full max-w-md rounded-t-[40px] sm:rounded-[40px] bg-caldera-limestone p-6 border border-caldera-obsidian/25 safe-pb animate-fadeIn">
         {/* Header with Color Accent */}
-        <div className="flex items-start justify-between border-b border-ritmo-line pb-3">
+        <div className="flex items-start justify-between border-b border-dotted border-caldera-obsidian/25 pb-3">
           <div className="flex items-center gap-2">
             <span
               className="w-3.5 h-3.5 rounded-full"
               style={{ backgroundColor: colorScheme.accent }}
             />
             <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-full ${colorScheme.bg} ${colorScheme.text}`}
+              className={`text-xs font-bold px-3 py-0.5 rounded-full uppercase ${
+                isTier1
+                  ? 'bg-caldera-ember text-caldera-obsidian border border-caldera-obsidian/30'
+                  : event.tier === 'tier_2'
+                  ? 'bg-caldera-plasma/15 text-caldera-plasma border border-caldera-plasma/30'
+                  : 'bg-caldera-sulfur text-caldera-obsidian border border-caldera-obsidian/20'
+              }`}
             >
               {tierConfig.label}
             </span>
@@ -54,7 +60,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="p-1 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft"
+            className="p-1 rounded-full text-caldera-obsidian/60 hover:text-caldera-obsidian hover:bg-caldera-pumice transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -63,25 +69,25 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         {/* Content */}
         <div className="mt-4 space-y-4">
           <div>
-            <h3 className="font-manrope text-lg font-bold text-ritmo-ink">
+            <h3 className="font-display text-xl uppercase tracking-wide text-caldera-obsidian">
               {event.title}
             </h3>
             {event.description && (
-              <p className="text-xs text-ritmo-muted mt-1 leading-relaxed">
+              <p className="text-xs text-caldera-muted mt-1 leading-relaxed font-medium">
                 {event.description}
               </p>
             )}
           </div>
 
           {/* Time & Date Badges */}
-          <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-ritmo-soft text-ritmo-ink">
-              <Calendar className="w-4 h-4 text-ritmo-muted shrink-0" />
+          <div className="grid grid-cols-2 gap-2.5 text-xs font-bold">
+            <div className="flex items-center gap-2 p-3 rounded-full bg-caldera-pumice text-caldera-obsidian border border-caldera-obsidian/15">
+              <Calendar className="w-4 h-4 text-caldera-obsidian/60 shrink-0" />
               <span>{event.event_date}</span>
             </div>
 
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-ritmo-soft text-ritmo-ink">
-              <Clock className="w-4 h-4 text-ritmo-muted shrink-0" />
+            <div className="flex items-center gap-2 p-3 rounded-full bg-caldera-pumice text-caldera-obsidian border border-caldera-obsidian/15">
+              <Clock className="w-4 h-4 text-caldera-obsidian/60 shrink-0" />
               <span>
                 {event.start_time.slice(0, 5)} – {event.end_time.slice(0, 5)}
               </span>
@@ -89,28 +95,28 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           </div>
 
           {/* Difficulty & Sync Details */}
-          <div className="rounded-xl border border-ritmo-line p-3 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between text-ritmo-muted">
-              <span className="flex items-center gap-1 font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-ritmo-orange" /> Dificultad Académica:
+          <div className="rounded-[24px] border border-caldera-obsidian/20 bg-caldera-pumice/40 p-4 space-y-2 text-xs">
+            <div className="flex items-center justify-between text-caldera-muted">
+              <span className="flex items-center gap-1.5 font-bold text-caldera-obsidian">
+                <Sparkles className="w-3.5 h-3.5 text-caldera-ember" /> Dificultad Académica:
               </span>
-              <span className="font-bold text-ritmo-ink">
+              <span className="font-bold px-2.5 py-0.5 rounded-full bg-caldera-sulfur text-caldera-obsidian border border-caldera-obsidian/20">
                 {event.difficulty_score ? `${event.difficulty_score} / 5` : 'Estándar (2/5)'}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-ritmo-muted">
-              <span className="flex items-center gap-1 font-semibold">
-                <BookOpen className="w-3.5 h-3.5 text-ritmo-blue" /> Origen:
+            <div className="flex items-center justify-between text-caldera-muted pt-1">
+              <span className="flex items-center gap-1.5 font-bold text-caldera-obsidian">
+                <BookOpen className="w-3.5 h-3.5 text-caldera-plasma" /> Origen:
               </span>
-              <span className="font-bold text-ritmo-ink uppercase text-[10px]">
+              <span className="font-bold text-caldera-obsidian uppercase text-[10px] px-2 py-0.5 rounded-full bg-caldera-limestone border border-caldera-obsidian/20">
                 {event.created_from}
               </span>
             </div>
 
             {isTier1 && (
-              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-[#ff5d63] bg-[#fff0f1] p-2 rounded-lg">
-                <Lock className="w-4 h-4 shrink-0" />
+              <div className="mt-2 flex items-center gap-2 text-[11px] font-bold text-caldera-obsidian bg-caldera-ember/20 p-2.5 rounded-[16px] border border-caldera-ember/40">
+                <Lock className="w-4 h-4 shrink-0 text-caldera-ember" />
                 <span>Bloque protegido: no se permite superposición ni reprogramación automática.</span>
               </div>
             )}
@@ -121,7 +127,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
               href="https://classroom.google.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-full bg-caldera-plasma hover:opacity-90 text-caldera-chalk font-bold text-xs transition-opacity"
             >
               <ExternalLink className="w-4 h-4" />
               <span>Abrir en Google Classroom</span>
@@ -129,12 +135,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2.5 pt-2">
             {!isTier1 && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-ritmo-red/40 text-ritmo-red text-xs font-bold hover:bg-ritmo-red/10 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-5 py-3 rounded-full border border-caldera-ember text-caldera-ember text-xs font-bold hover:bg-caldera-ember/10 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Eliminar</span>
@@ -144,7 +150,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl bg-ritmo-ink text-white text-xs font-bold hover:bg-ritmo-ink/90 shadow-sm"
+              className="flex-1 py-3 rounded-full bg-caldera-obsidian text-caldera-chalk text-xs font-bold hover:bg-caldera-obsidian/90 transition-colors"
             >
               Cerrar
             </button>

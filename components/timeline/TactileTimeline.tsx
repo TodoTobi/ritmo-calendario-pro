@@ -314,35 +314,35 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
   }, [updateDragCalculations, stopDragging]);
 
   return (
-    <div className="flex-1 flex flex-col bg-ritmo-bg relative overflow-hidden pb-24 select-none">
+    <div className="flex-1 flex flex-col bg-caldera-pumice/30 relative overflow-hidden pb-24 select-none">
       {/* Collision Warning Banner */}
       {collisionWarning && (
-        <div className="sticky top-0 z-40 flex items-center gap-2 bg-[#fff0f1] px-4 py-2.5 text-xs font-bold text-[#ff5d63] border-b border-[#ff5d63]/30 shadow-md animate-pulse">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="sticky top-0 z-40 flex items-center gap-2 bg-caldera-ember px-4 py-2.5 text-xs font-bold text-caldera-obsidian border-b border-caldera-obsidian animate-pulse">
+          <AlertCircle className="w-4 h-4 shrink-0 text-caldera-obsidian" />
           <span>{collisionWarning}</span>
         </div>
       )}
 
       {/* Success Notification */}
       {toastMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-ritmo-ink text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl">
-          <CheckCircle2 className="w-4 h-4 text-ritmo-green shrink-0" />
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-caldera-obsidian text-caldera-chalk px-5 py-2 rounded-full text-xs font-bold border border-caldera-chalk/20">
+          <CheckCircle2 className="w-4 h-4 text-caldera-sulfur shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Header Info */}
-      <div className="bg-white px-4 py-2.5 border-b border-ritmo-line flex items-center justify-between">
+      <div className="bg-caldera-limestone px-4 py-2.5 border-b border-dotted border-caldera-obsidian/25 flex items-center justify-between">
         <div>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-ritmo-muted">
+          <h2 className="font-display text-sm tracking-wider uppercase text-caldera-obsidian">
             Línea Táctil Magnética
           </h2>
-          <p className="text-[11px] text-ritmo-ink font-semibold">
+          <p className="text-[11px] text-caldera-muted font-medium">
             Arrastra el tirador o mantén presionado para reordenar
           </p>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-bold">
-          <span className="flex items-center gap-1 text-[#ff5d63]">
+          <span className="flex items-center gap-1 text-caldera-ember bg-caldera-ember/15 px-2.5 py-0.5 rounded-full border border-caldera-ember/30 uppercase">
             <Lock className="w-3 h-3" /> Tier 1 Blindado
           </span>
         </div>
@@ -367,10 +367,10 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                 className="absolute left-0 right-0 flex items-center pointer-events-none"
                 style={{ top: `${topPx}px` }}
               >
-                <span className="w-12 text-[11px] font-mono font-bold text-ritmo-muted text-right pr-2">
+                <span className="w-12 text-[12px] font-display text-caldera-obsidian/60 text-right pr-2 tracking-wider">
                   {hour.toString().padStart(2, '0')}:00
                 </span>
-                <div className="flex-1 h-[1px] bg-ritmo-line" />
+                <div className="flex-1 h-[1px] border-t border-dotted border-caldera-obsidian/20" />
               </div>
             );
           })}
@@ -384,13 +384,13 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
             return (
               <div
                 key={`t1-bg-${zone.id}`}
-                className="absolute left-14 right-2 rounded-lg bg-[#ff5d63]/5 border-2 border-dashed border-[#ff5d63]/30 pointer-events-none flex items-center justify-end pr-2"
+                className="absolute left-14 right-2 rounded-[20px] bg-caldera-ember/10 border-2 border-dotted border-caldera-ember/40 pointer-events-none flex items-center justify-end pr-3"
                 style={{
                   top: `${startPx}px`,
                   height: `${heightPx}px`,
                 }}
               >
-                <span className="text-[9px] font-bold text-[#ff5d63] uppercase tracking-wider flex items-center gap-1 opacity-70">
+                <span className="text-[10px] font-bold text-caldera-ember uppercase tracking-wider flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" /> Zona Blindada Tier 1
                 </span>
               </div>
@@ -416,25 +416,26 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
               <div
                 key={event.id}
                 onTouchStart={(e) => handleCardTouchStart(e, event)}
+                className={`absolute left-14 right-2 rounded-[20px] p-2.5 select-none transition-all bg-caldera-limestone border-y border-r border-caldera-obsidian/15 ${
+                  isDragging
+                    ? 'z-30 ring-2 ring-caldera-ember border-caldera-ember'
+                    : isTier1
+                    ? 'z-10 opacity-95'
+                    : 'z-20 hover:border-caldera-obsidian/35'
+                } border-l-4 ${colorScheme.text}`}
                 style={{
                   top: `${baseTopPx}px`,
                   height: `${heightPx - 3}px`,
-                  transform: isDragging ? `translate3d(0, ${dragOffsetY}px, 0) scale(1.03)` : 'translate3d(0, 0, 0)',
+                  transform: isDragging ? `translate3d(0, ${dragOffsetY}px, 0) scale(1.02)` : 'translate3d(0, 0, 0)',
                   willChange: isDragging ? 'transform' : 'auto',
+                  borderLeftColor: colorScheme.accent,
                 }}
-                className={`absolute left-14 right-2 rounded-xl p-2.5 select-none transition-shadow ${
-                  isDragging
-                    ? 'z-30 shadow-2xl ring-2 ring-ritmo-purple ring-offset-2'
-                    : isTier1
-                    ? 'z-10 shadow-sm opacity-95'
-                    : 'z-20 shadow-sm hover:shadow-md'
-                } ${colorScheme.bg} border-l-4 ${colorScheme.text} border-t border-r border-b border-ritmo-line/40`}
               >
                 <div className="flex items-start justify-between gap-1.5 h-full">
                   <div className="flex flex-col justify-between h-full min-w-0 flex-1">
                     <div>
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-ritmo-muted">
-                        <span>
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-medium text-caldera-muted">
+                        <span className="text-caldera-obsidian/70">
                           {isDragging
                             ? `${minutesToTimeString(pxToMinutes(currentPreviewTopPx))} – ${minutesToTimeString(
                                 pxToMinutes(currentPreviewTopPx) + durationMin
@@ -442,18 +443,18 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                             : `${event.start_time.slice(0, 5)} – ${event.end_time.slice(0, 5)}`}
                         </span>
                         {isTier1 && (
-                          <span className="flex items-center gap-0.5 text-[#ff5d63]">
+                          <span className="flex items-center gap-0.5 text-caldera-ember font-bold">
                             <Lock className="w-2.5 h-2.5" /> Fijo
                           </span>
                         )}
                       </div>
-                      <h4 className="font-bold text-xs text-ritmo-ink truncate mt-0.5">
+                      <h4 className="font-display text-sm tracking-wide text-caldera-obsidian uppercase truncate mt-0.5">
                         {event.title}
                       </h4>
                     </div>
 
                     {heightPx > 45 && event.description && (
-                      <p className="text-[10px] text-ritmo-muted line-clamp-1">
+                      <p className="text-[10px] text-caldera-muted line-clamp-1 font-medium">
                         {event.description}
                       </p>
                     )}
@@ -465,14 +466,14 @@ export const TactileTimeline: React.FC<TactileTimelineProps> = ({
                       <div
                         onTouchStart={(e) => handleGripTouchStart(e, event)}
                         onMouseDown={(e) => handleGripTouchStart(e, event)}
-                        className="p-1.5 -mr-1 rounded-lg active:bg-ritmo-muted/20 cursor-grab active:cursor-grabbing text-ritmo-muted hover:text-ritmo-ink transition-colors"
+                        className="p-1.5 -mr-1 rounded-full hover:bg-caldera-pumice active:bg-caldera-pumice cursor-grab active:cursor-grabbing text-caldera-obsidian/60 hover:text-caldera-obsidian transition-colors"
                         title="Arrastrar para mover horario"
                       >
                         <GripVertical className="w-4 h-4" />
                       </div>
                     ) : (
                       <div className="p-1 -mr-1">
-                        <Lock className="w-3.5 h-3.5 text-ritmo-red/60" />
+                        <Lock className="w-3.5 h-3.5 text-caldera-ember" />
                       </div>
                     )}
                   </div>

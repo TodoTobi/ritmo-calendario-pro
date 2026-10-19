@@ -59,7 +59,6 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
     onSelectMonthYear(todayYear, todayMonth);
   };
 
-  // Quick year options around selected year
   const quickYears = [2024, 2025, 2026, 2027, 2028];
 
   return (
@@ -67,34 +66,34 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="month-year-picker-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl border border-ritmo-line transform transition-all animate-scaleUp"
+        className="w-full max-w-sm rounded-[40px] bg-caldera-limestone p-6 border border-caldera-obsidian/25 transform transition-all animate-scaleUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-ritmo-line/80">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-ritmo-purple-soft flex items-center justify-center text-ritmo-purple">
+        <div className="flex items-center justify-between pb-3 border-b border-dotted border-caldera-obsidian/25">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-caldera-ember flex items-center justify-center text-caldera-obsidian">
               <CalendarIcon className="w-4 h-4" />
             </div>
             <div>
               <h2
                 id="month-year-picker-title"
-                className="font-manrope text-base font-extrabold text-ritmo-ink"
+                className="font-display text-lg uppercase tracking-wide text-caldera-obsidian"
               >
                 Navegar al Mes
               </h2>
-              <p className="text-[11px] text-ritmo-muted">Selecciona mes y año del calendario</p>
+              <p className="text-[11px] text-caldera-muted font-medium">Selecciona mes y año del calendario</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar selector"
-            className="p-1.5 rounded-full text-ritmo-muted hover:text-ritmo-ink hover:bg-ritmo-soft transition-colors"
+            className="p-1.5 rounded-full text-caldera-obsidian/60 hover:text-caldera-obsidian hover:bg-caldera-pumice transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -107,18 +106,18 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
               type="button"
               onClick={() => setSelectedYear((y) => y - 1)}
               aria-label="Año anterior"
-              className="p-1.5 rounded-xl text-ritmo-ink hover:bg-ritmo-soft active:scale-95 transition-all"
+              className="p-2 rounded-full text-caldera-obsidian hover:bg-caldera-pumice active:scale-95 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="font-manrope text-2xl font-black text-ritmo-ink tracking-tight">
+            <span className="font-display text-3xl text-caldera-obsidian tracking-wider">
               {selectedYear}
             </span>
             <button
               type="button"
               onClick={() => setSelectedYear((y) => y + 1)}
               aria-label="Año siguiente"
-              className="p-1.5 rounded-xl text-ritmo-ink hover:bg-ritmo-soft active:scale-95 transition-all"
+              className="p-2 rounded-full text-caldera-obsidian hover:bg-caldera-pumice active:scale-95 transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -131,10 +130,10 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
                 key={yr}
                 type="button"
                 onClick={() => setSelectedYear(yr)}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${
                   selectedYear === yr
-                    ? 'bg-ritmo-purple text-white shadow-xs'
-                    : 'bg-ritmo-soft text-ritmo-muted hover:text-ritmo-ink'
+                    ? 'bg-caldera-obsidian text-caldera-chalk'
+                    : 'bg-caldera-pumice text-caldera-muted hover:text-caldera-obsidian border border-caldera-obsidian/15'
                 }`}
               >
                 {yr}
@@ -156,18 +155,18 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
                 key={m.short}
                 type="button"
                 onClick={() => handleSelectMonth(idx)}
-                className={`py-3 px-2 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 ${
+                className={`py-3 px-2 rounded-[24px] flex flex-col items-center justify-center transition-all active:scale-95 border ${
                   isCurrentlySelected
-                    ? 'bg-ritmo-purple text-white shadow-md shadow-ritmo-purple/25 font-bold scale-[1.02]'
+                    ? 'bg-caldera-ember text-caldera-obsidian border-caldera-obsidian/30 font-bold scale-[1.02]'
                     : isTodayMonth
-                    ? 'bg-ritmo-purple-soft/60 text-ritmo-purple border-2 border-ritmo-purple/40 font-bold'
-                    : 'bg-ritmo-soft/70 text-ritmo-ink hover:bg-ritmo-soft hover:text-ritmo-purple font-semibold'
+                    ? 'bg-caldera-sulfur text-caldera-obsidian border-caldera-obsidian/30 font-bold'
+                    : 'bg-caldera-pumice/50 text-caldera-obsidian border-caldera-obsidian/15 hover:bg-caldera-pumice font-medium'
                 }`}
               >
-                <span className="font-manrope text-sm tracking-tight">{m.name}</span>
+                <span className="font-display text-sm tracking-wide uppercase">{m.name}</span>
                 <span
-                  className={`text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
-                    isCurrentlySelected ? 'text-white/80' : 'text-ritmo-muted'
+                  className={`text-[9px] uppercase font-bold tracking-wider mt-0.5 ${
+                    isCurrentlySelected ? 'text-caldera-obsidian/80' : 'text-caldera-muted'
                   }`}
                 >
                   {m.short}
@@ -178,18 +177,18 @@ export const MonthYearPickerModal: React.FC<MonthYearPickerModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-4 pt-3 border-t border-ritmo-line/80 flex items-center justify-between">
+        <div className="mt-4 pt-3 border-t border-dotted border-caldera-obsidian/25 flex items-center justify-between">
           <button
             type="button"
             onClick={handleJumpToToday}
-            className="text-xs font-bold text-ritmo-purple hover:underline py-1 px-2 rounded-lg"
+            className="text-xs font-bold text-caldera-ember hover:underline py-1 px-2 rounded-full"
           >
-            Ir al mes actual (Hoy)
+            Ir a Hoy
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-ritmo-soft text-xs font-bold text-ritmo-ink hover:bg-ritmo-line transition-colors"
+            className="px-5 py-2 rounded-full bg-caldera-obsidian text-xs font-bold text-caldera-chalk hover:bg-caldera-obsidian/90 transition-colors"
           >
             Cerrar
           </button>
