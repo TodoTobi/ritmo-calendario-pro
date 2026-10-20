@@ -34,7 +34,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="event-detail-title"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4"
+    >
       <div className="w-full max-w-md rounded-t-[40px] sm:rounded-[40px] bg-caldera-limestone p-6 border border-caldera-obsidian/25 safe-pb animate-fadeIn">
         {/* Header with Color Accent */}
         <div className="flex items-start justify-between border-b border-dotted border-caldera-obsidian/25 pb-3">
@@ -69,7 +74,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
         {/* Content */}
         <div className="mt-4 space-y-4">
           <div>
-            <h3 className="font-display text-xl uppercase tracking-wide text-caldera-obsidian">
+            <h3 id="event-detail-title" className="font-display text-xl uppercase tracking-wide text-caldera-obsidian">
               {event.title}
             </h3>
             {event.description && (

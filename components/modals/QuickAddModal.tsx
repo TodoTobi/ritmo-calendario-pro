@@ -56,10 +56,15 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quick-add-title"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-fadeIn"
+    >
       <div className="w-full max-w-md rounded-t-[40px] sm:rounded-[40px] bg-caldera-limestone p-6 border border-caldera-obsidian/25 safe-pb">
         <div className="flex items-center justify-between border-b border-dotted border-caldera-obsidian/25 pb-3">
-          <h2 className="font-display text-lg uppercase tracking-wide text-caldera-obsidian flex items-center gap-2">
+          <h2 id="quick-add-title" className="font-display text-lg uppercase tracking-wide text-caldera-obsidian flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-caldera-ember" />
             Nuevo Bloque de Calendario
           </h2>
